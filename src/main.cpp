@@ -23,12 +23,45 @@ struct Cell{
 };
 
 
-class Visitor{
-private:
-typedef std::map<std::string, std::function<double (const std::vector<double> &)>> SymbolMap;
+template <typename EvalReturn> class Visitor{
+public:
+	typedef std::map<std::string, std::function<EvalReturn (const std::vector<double> &)>> SymbolMap;
+	typedef std::function<EvalReturn (const std::string &number)> NumberHandler;
+
+protected:
 SymbolMap symbolMap;
+NumberHandler numberHandler;
+
 public:
 	Visitor(){
+	}
+
+	double eval(const Cell &c){
+		switch(c.type){
+			case Cell::Number:{
+				return numberHandler(c.val.c_str());
+			}case Cell::List:{
+				std::vector<double> evalArgs(c.list.size()-1);
+				// eval each argument
+				std::transform(c.list.begin()+1, c.list.end(), evalArgs.begin(), 
+					[=](const Cell &c) -> double{
+						return this->eval(c);
+					}
+				);
+				// call function specified by sumbol map with evaled arguments
+				return symbolMap.at(c.list[0].val)(evalArgs);
+			}case Cell::Symbol:{
+				std::runtime_error("Symbol not expected.");
+			}
+			return 0.0;
+		}
+	}
+};
+
+class Calculator : public Visitor<double>{
+	public:
+
+	Calculator(){
 		symbolMap["+"] = [](const std::vector<double> &d){return d[0] + d[1];};
 		symbolMap["-"] = [](const std::vector<double> &d){return d[0] - d[1];};
 		symbolMap["/"] = [](const std::vector<double> &d){return d[0] / d[1];};
@@ -37,27 +70,12 @@ public:
 		symbolMap["cos"] = [](const std::vector<double> &d){return std::cos(d[0]);};
 		symbolMap["tan"] = [](const std::vector<double> &d){return std::tan(d[0]);};
 		symbolMap["pow"] = [](const std::vector<double> &d){return std::pow(d[0], d[1]);};
+
+		numberHandler = [](const std::string &number){
+			return std::atof(number.c_str());
+		};
 	}
 
-	double eval(const Cell &c){
-		switch(c.type){
-			case Cell::Number:{
-				return std::atof(c.val.c_str());
-				break;
-			}case Cell::List:{
-				std::vector<double> evalArgs(c.list.size()-1);
-				std::transform(c.list.begin()+1, c.list.end(), evalArgs.begin(), 
-					[=](const Cell &c) -> double{
-						return this->eval(c);
-					}
-				);
-				return symbolMap.at(c.list[0].val)(evalArgs);
-			}case Cell::Symbol:{
-				std::runtime_error("Symbol not expected.");
-			}
-			return 0.0;
-		}
-	}
 };
 
 
@@ -141,12 +159,12 @@ std::string to_string(const Cell & exp)
 // read-eval-print-loop
 void repl(const std::string & prompt )
 {
-	Visitor v;
+	Calculator calc;
     for (;;) {
         std::cout << prompt;
         std::string line; std::getline(std::cin, line);
-        std::cout << to_string(read(line)) << '\n';
-        std::cout << v.eval(read(line)) << '\n';
+        // std::cout << to_string(read(line)) << '\n';
+        std::cout << calc.eval(read(line)) << '\n';
     }
 }
 
