@@ -25,7 +25,7 @@ struct Cell{
 
 template <typename EvalReturn> class Visitor{
 public:
-	typedef std::map<std::string, std::function<EvalReturn (const std::vector<double> &)>> SymbolMap;
+	typedef std::map<std::string, std::function<EvalReturn (const std::vector<EvalReturn> &)>> SymbolMap;
 	typedef std::function<EvalReturn (const std::string &number)> NumberHandler;
 
 protected:
@@ -36,15 +36,15 @@ public:
 	Visitor(){
 	}
 
-	double eval(const Cell &c){
+	EvalReturn eval(const Cell &c){
 		switch(c.type){
 			case Cell::Number:{
 				return numberHandler(c.val.c_str());
 			}case Cell::List:{
-				std::vector<double> evalArgs(c.list.size()-1);
+				std::vector<EvalReturn> evalArgs(c.list.size()-1);
 				// eval each argument
 				std::transform(c.list.begin()+1, c.list.end(), evalArgs.begin(), 
-					[=](const Cell &c) -> double{
+					[=](const Cell &c) -> EvalReturn{
 						return this->eval(c);
 					}
 				);
@@ -53,14 +53,14 @@ public:
 			}case Cell::Symbol:{
 				std::runtime_error("Symbol not expected.");
 			}
-			return 0.0;
+			std::runtime_error("Should never get here.");
 		}
 	}
 };
 
 class Calculator : public Visitor<double>{
-	public:
 
+	public:
 	Calculator(){
 		symbolMap["+"] = [](const std::vector<double> &d){return d[0] + d[1];};
 		symbolMap["-"] = [](const std::vector<double> &d){return d[0] - d[1];};
@@ -78,6 +78,70 @@ class Calculator : public Visitor<double>{
 
 };
 
+class CodeGenCalculator : public Visitor<AsmJit::XmmVar>{
+	private:
+	AsmJit::X86Compiler compiler;
+	public:
+	CodeGenCalculator(){
+		using namespace AsmJit;
+		
+		symbolMap["+"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
+			// XmmVar resultVar(compiler.newXmmVar());
+			compiler.addsd(args[0], args[1]);
+			// compiler.movq(resultVar, args[0]);
+			return args[0];
+		};
+	
+		symbolMap["-"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
+			compiler.subsd(args[0], args[1]);
+			return args[0];
+		};
+	
+		symbolMap["*"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
+			compiler.mulsd(args[0], args[1]);
+			return args[0];
+		};
+	
+		symbolMap["/"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
+			compiler.divsd(args[0], args[1]);
+			return args[0];
+		};
+
+
+		// symbolMap["-"] = [](const std::vector<double> &d){return d[0] - d[1];};
+		// symbolMap["/"] = [](const std::vector<double> &d){return d[0] / d[1];};
+		// symbolMap["*"] = [](const std::vector<double> &d){return d[0] * d[1];};
+
+		numberHandler = [&](const std::string &number) -> XmmVar{
+			double x = std::atof(number.c_str());
+			XmmVar xVar(compiler.newXmmVar());
+			SetXmmVar(compiler, xVar, x);
+			return xVar;
+		};
+	}
+
+	std::function<double (void)> generate(const Cell &c){
+		compiler.newFunc(AsmJit::kX86FuncConvDefault, AsmJit::FuncBuilder0<double>());
+		AsmJit::XmmVar retVar = eval(c);
+		compiler.ret(retVar);
+		compiler.endFunc();
+		typedef double (*FuncPtrType)();
+		std::function<double (void)> f = reinterpret_cast<FuncPtrType>(compiler.make());
+		return f;
+		
+	}
+
+	private:
+	void SetXmmVar(AsmJit::X86Compiler &c, AsmJit::XmmVar &v, double d){
+		using namespace AsmJit;
+        GpVar half(c.newGpVar());
+        uint64_t *i = reinterpret_cast<uint64_t*>(&d);
+        c.mov(half, i[0]);
+        c.movq(v, half);
+        c.unuse(half);
+	}
+
+};
 
 // convert given string to list of tokens
 // originally from: 
@@ -161,10 +225,14 @@ void repl(const std::string & prompt )
 {
 	Calculator calc;
     for (;;) {
+		CodeGenCalculator cgcalc;
         std::cout << prompt;
         std::string line; std::getline(std::cin, line);
         // std::cout << to_string(read(line)) << '\n';
         std::cout << calc.eval(read(line)) << '\n';
+
+        std::function<double (void)> f = cgcalc.generate(read(line));
+        std::cout << "code gen " << f() << '\n';
     }
 }
 
