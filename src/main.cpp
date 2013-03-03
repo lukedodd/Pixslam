@@ -1,110 +1,157 @@
-// [AsmJit]
-// Complete JIT Assembler for C++ Language.
-//
-// [License]
-// Zlib - See COPYING file in this package.
+#include <vector>
+#include <list>
+#include <iostream>
+#include <map>
+#include <functional>
+#include <algorithm>
+#include <cctype>
+#include <cstdlib>
+#include <cmath>
+#include <stdexcept>
 
-// [Dependencies - AsmJit]
 #include <asmjit/asmjit.h>
 
-// [Dependencies - C]
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
-using namespace AsmJit;
 
-struct BitDescription
-{
-  uint32_t mask;
-  const char* description;
+struct Cell{
+	enum Type {Symbol, Number, List};
+    typedef Cell (*proc_type)(const std::vector<Cell> &);
+    typedef std::vector<Cell>::const_iterator iter;
+    Type type; std::string val; std::vector<Cell> list;
+    Cell(Type type = Symbol) : type(type) {}
+    Cell(Type type, const std::string & val) : type(type), val(val) {}
 };
 
-#if defined(ASMJIT_X86) || defined(ASMJIT_X64)
-static const BitDescription x86Features[] = 
-{
-  { kX86FeatureRdtsc              , "RDTSC" },
-  { kX86FeatureRdtscP             , "RDTSCP" },
-  { kX86FeatureCMov               , "CMOV" },
-  { kX86FeatureCmpXchg8B          , "CMPXCHG8B" },
-  { kX86FeatureCmpXchg16B         , "CMPXCHG16B" },
-  { kX86FeatureClFlush            , "CLFLUSH" },
-  { kX86FeaturePrefetch           , "PREFETCH" },
-  { kX86FeatureLahfSahf           , "LAHF/SAHF" },
-  { kX86FeatureFXSR               , "FXSAVE/FXRSTOR" },
-  { kX86FeatureFFXSR              , "FXSAVE/FXRSTOR Optimizations" },
-  { kX86FeatureMmx                , "MMX" },
-  { kX86FeatureMmxExt             , "MMX Extensions" },
-  { kX86Feature3dNow              , "3dNow!" },
-  { kX86Feature3dNowExt           , "3dNow! Extensions" },
-  { kX86FeatureSse                , "SSE" },
-  { kX86FeatureSse2               , "SSE2" },
-  { kX86FeatureSse3               , "SSE3" },
-  { kX86FeatureSsse3              , "SSSE3" },
-  { kX86FeatureSse4A              , "SSE4A" },
-  { kX86FeatureSse41              , "SSE4.1" },
-  { kX86FeatureSse42              , "SSE4.2" },
-  { kX86FeatureAvx                , "AVX" },
-  { kX86FeatureMSse               , "Misaligned SSE" },
-  { kX86FeatureMonitorMWait       , "MONITOR/MWAIT" },
-  { kX86FeatureMovBE              , "MOVBE" },
-  { kX86FeaturePopCnt             , "POPCNT" },
-  { kX86FeatureLzCnt              , "LZCNT" },
-  { kX86FeaturePclMulDQ           , "PCLMULDQ" },
-  { kX86FeatureMultiThreading     , "Multi-Threading" },
-  { kX86FeatureExecuteDisableBit  , "Execute-Disable Bit" },
-  { kX86Feature64Bit              , "64-Bit Processor" },
-  { 0, NULL }
+
+class Visitor{
+private:
+typedef std::map<std::string, std::function<double (const std::vector<double> &)>> SymbolMap;
+SymbolMap symbolMap;
+public:
+	Visitor(){
+		symbolMap["+"] = [](const std::vector<double> &d){return d[0] + d[1];};
+		symbolMap["-"] = [](const std::vector<double> &d){return d[0] - d[1];};
+		symbolMap["/"] = [](const std::vector<double> &d){return d[0] / d[1];};
+		symbolMap["*"] = [](const std::vector<double> &d){return d[0] * d[1];};
+		symbolMap["sin"] = [](const std::vector<double> &d){return std::sin(d[0]);};
+		symbolMap["cos"] = [](const std::vector<double> &d){return std::cos(d[0]);};
+		symbolMap["tan"] = [](const std::vector<double> &d){return std::tan(d[0]);};
+		symbolMap["pow"] = [](const std::vector<double> &d){return std::pow(d[0], d[1]);};
+	}
+
+	double eval(const Cell &c){
+		switch(c.type){
+			case Cell::Number:{
+				return std::atof(c.val.c_str());
+				break;
+			}case Cell::List:{
+				std::vector<double> evalArgs(c.list.size()-1);
+				std::transform(c.list.begin()+1, c.list.end(), evalArgs.begin(), 
+					[=](const Cell &c) -> double{
+						return this->eval(c);
+					}
+				);
+				return symbolMap.at(c.list[0].val)(evalArgs);
+			}case Cell::Symbol:{
+				std::runtime_error("Symbol not expected.");
+			}
+			return 0.0;
+		}
+	}
 };
-#endif // ASMJIT_X86 || ASMJIT_X64
 
-static void printBits(const char* msg, uint32_t mask, const BitDescription* d)
-{
-  for (; d->mask; d++)
-  {
-    if (mask & d->mask)
-      printf("%s%s\n", msg, d->description);
-  }
+
+// convert given string to list of tokens
+// originally from: 
+// http://howtowriteaprogram.blogspot.co.uk/2010/11/lisp-interpreter-in-90-lines-of-c.html
+std::list<std::string> tokenize(const std::string & str){
+    std::list<std::string> tokens;
+    const char * s = str.c_str();
+    while (*s) {
+        while (*s == ' ')
+            ++s;
+        if (*s == '(' || *s == ')')
+            tokens.push_back(*s++ == '(' ? "(" : ")");
+        else {
+            const char * t = s;
+            while (*t && *t != ' ' && *t != '(' && *t != ')')
+                ++t;
+            tokens.push_back(std::string(s, t));
+            s = t;
+        }
+    }
+    return tokens;
 }
 
-int main(int argc, char* argv[])
+bool isdig(char c) { return isdigit(static_cast<unsigned char>(c)) != 0; }
+
+// numbers become Numbers; every other token is a Symbol
+// originally from: 
+// http://howtowriteaprogram.blogspot.co.uk/2010/11/lisp-interpreter-in-90-lines-of-c.html
+Cell atom(const std::string & token)
 {
-  const CpuInfo* cpu = CpuInfo::getGlobal();
-
-  // --------------------------------------------------------------------------
-  // [Core Features]
-  // --------------------------------------------------------------------------
-
-  printf("CPU Detection\n");
-  printf("=============\n");
-
-  printf("\nBasic info\n");
-  printf("  Vendor string         : %s\n", cpu->getVendorString());
-  printf("  Brand string          : %s\n", cpu->getBrandString());
-  printf("  Family                : %u\n", cpu->getFamily());
-  printf("  Model                 : %u\n", cpu->getModel());
-  printf("  Stepping              : %u\n", cpu->getStepping());
-  printf("  Number of Processors  : %u\n", cpu->getNumberOfProcessors());
-  printf("  Features              : 0x%08X\n", cpu->getFeatures());
-  printf("  Bugs                  : 0x%08X\n", cpu->getBugs());
-
-  // --------------------------------------------------------------------------
-  // [X86 Features]
-  // --------------------------------------------------------------------------
-
-#if defined(ASMJIT_X86) || defined(ASMJIT_X64)
-  const X86CpuInfo* x86Cpu = static_cast<const X86CpuInfo*>(cpu);
-
-  printf("\nX86/X64 Extended Info:\n");
-  printf("  Processor Type        : %u\n", x86Cpu->getProcessorType());
-  printf("  Brand Index           : %u\n", x86Cpu->getBrandIndex());
-  printf("  CL Flush Cache Line   : %u\n", x86Cpu->getFlushCacheLineSize());
-  printf("  Max logical Processors: %u\n", x86Cpu->getMaxLogicalProcessors());
-  printf("  APIC Physical ID      : %u\n", x86Cpu->getApicPhysicalId());
-
-  printf("\nX86/X64 Features:\n");
-  printBits("  ", cpu->getFeatures(), x86Features);
-#endif // ASMJIT_X86 || ASMJIT_X64
-
-  return 0;
+    if (isdig(token[0]) || (token[0] == '-' && isdig(token[1])))
+        return Cell(Cell::Number, token);
+    return Cell(Cell::Symbol, token);
 }
+
+// return the Lisp expression in the given tokens
+// originally from: 
+// http://howtowriteaprogram.blogspot.co.uk/2010/11/lisp-interpreter-in-90-lines-of-c.html
+Cell read_from(std::list<std::string> & tokens)
+{
+    const std::string token(tokens.front());
+    tokens.pop_front();
+    if (token == "(") {
+        Cell c(Cell::List);
+        while (tokens.front() != ")")
+            c.list.push_back(read_from(tokens));
+        tokens.pop_front();
+        return c;
+    }
+    else
+        return atom(token);
+}
+
+// return the Lisp expression represented by the given string
+// originally from: 
+// http://howtowriteaprogram.blogspot.co.uk/2010/11/lisp-interpreter-in-90-lines-of-c.html
+Cell read(const std::string & s)
+{
+    std::list<std::string> tokens(tokenize(s));
+    return read_from(tokens);
+}
+
+// convert given Cell to a Lisp-readable string
+// originally from: 
+// http://howtowriteaprogram.blogspot.co.uk/2010/11/lisp-interpreter-in-90-lines-of-c.html
+std::string to_string(const Cell & exp)
+{
+    if (exp.type == Cell::List) {
+        std::string s("(");
+        for (Cell::iter e = exp.list.begin(); e != exp.list.end(); ++e)
+            s += to_string(*e) + ' ';
+        if (s[s.size() - 1] == ' ')
+            s.erase(s.size() - 1);
+        return s + ')';
+    }
+    return exp.val;
+}
+
+// read-eval-print-loop
+void repl(const std::string & prompt )
+{
+	Visitor v;
+    for (;;) {
+        std::cout << prompt;
+        std::string line; std::getline(std::cin, line);
+        std::cout << to_string(read(line)) << '\n';
+        std::cout << v.eval(read(line)) << '\n';
+    }
+}
+
+int main ()
+{
+	repl(">");
+}
+
