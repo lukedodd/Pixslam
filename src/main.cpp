@@ -93,10 +93,9 @@ private:
 	std::map<std::string, int> argNameToIndex;
 	Cell cell;
 public:
-	CalculatorFunction(const std::vector<std::string> &names, Cell &c) : cell(c){
+	CalculatorFunction(const std::vector<std::string> &names, const Cell &c) : cell(c){
 		for(int i = 0; i < names.size(); ++i)
 			argNameToIndex[names[i]] = i;
-
 	}
 
 	double operator()(const std::vector<double> &args){
@@ -109,11 +108,15 @@ public:
 };
 
 	
-class CodeGenCalculator : public Visitor<AsmJit::XmmVar>{
+class CodeGenCalculatorFunction : public Visitor<AsmJit::XmmVar>{
 private:
 	AsmJit::X86Compiler compiler;
+	std::map<std::string, int> argNameToIndex;
+
+	typedef double (*FuncPtrType)(const double * args);
+	FuncPtrType generatedFunction;
 public:
-	CodeGenCalculator(){
+	CodeGenCalculatorFunction(const std::vector<std::string> &names, const Cell &cell){
 		using namespace AsmJit;
 		
 		functionMap["+"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
@@ -149,17 +152,37 @@ public:
 			SetXmmVar(compiler, xVar, x);
 			return xVar;
 		};
+
+		for(int i = 0; i < names.size(); ++i)
+			argNameToIndex[names[i]] = i;
+
+		symbolHandler = [&](const std::string name) -> XmmVar{
+			// Lookup name in args and return AsmJit variable
+			// with the arg loaded in.
+			// TODO: this could be more efficient - could
+			// create one list of XmmVars and use that.
+			GpVar ptr(compiler.getGpArg(0));
+			XmmVar v(compiler.newXmmVar());
+			int offset = argNameToIndex.at(name)*sizeof(double);
+			compiler.movsd(v, Mem(ptr, offset));
+			return v;
+		};
+
+		generatedFunction = generate(cell);
 	}
 
-	std::function<double (void)> generate(const Cell &c){
-		compiler.newFunc(AsmJit::kX86FuncConvDefault, AsmJit::FuncBuilder0<double>());
+	FuncPtrType generate(const Cell &c){
+		compiler.newFunc(AsmJit::kX86FuncConvDefault, 
+		                 AsmJit::FuncBuilder1<double, const double *>());
 		AsmJit::XmmVar retVar = eval(c);
 		compiler.ret(retVar);
 		compiler.endFunc();
-		typedef double (*FuncPtrType)();
-		std::function<double (void)> f = reinterpret_cast<FuncPtrType>(compiler.make());
-		return f;
+		return reinterpret_cast<FuncPtrType>(compiler.make());
 		
+	}
+
+	double operator()(const std::vector<double> &args) const {
+		return generatedFunction(&args[0]); 
 	}
 
 	private:
@@ -173,6 +196,7 @@ public:
 	}
 
 };
+
 
 // convert given string to list of tokens
 // originally from: 
@@ -254,6 +278,7 @@ std::string to_string(const Cell & exp)
 // read-eval-print-loop
 void repl(const std::string & prompt )
 {
+	/*
 	Calculator calc;
     for (;;) {
 		CodeGenCalculator cgcalc;
@@ -261,20 +286,23 @@ void repl(const std::string & prompt )
         std::string line; std::getline(std::cin, line);
        	Cell cell = read(line);
         std::cout << calc.eval(read(line)) << '\n';
-        std::function<double (void)> f = cgcalc.generate(read(line));
+        // std::function<double (void)> f = cgcalc.generate(read(line));
         std::cout << "code gen " << f() << '\n';
     }
+    */
 }
 
 int main ()
 {
 	// repl(">");
-	std::vector<std::string> argNames = {"x", "y"};
+	std::vector<std::string> argNames = {"x", "y", "z"};
 	std::vector<double> args = {1.5, 2.5};
-	std::string functionCode = ("(+ x (/ x y))");
+	std::string functionCode = ("(+ x (/ x (- y x)))");
 	Cell functionCell = read(functionCode);
 	CalculatorFunction function(argNames, functionCell);
+	CodeGenCalculatorFunction cgFunction(argNames, functionCell);
 	std::cout << function(args) << std::endl;
+	std::cout << cgFunction(args) << std::endl;
 	return 0;
 }
 
