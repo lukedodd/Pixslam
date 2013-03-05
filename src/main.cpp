@@ -301,8 +301,13 @@ int main ()
 	Cell functionCell = read(functionCode);
 	CalculatorFunction function(argNames, functionCell);
 	CodeGenCalculatorFunction cgFunction(argNames, functionCell);
-	std::cout << function(args) << std::endl;
-	std::cout << cgFunction(args) << std::endl;
+	std::cout << "Interpreted output: " << function(args) << std::endl;
+	std::cout << "Code gen output: " << cgFunction(args) << std::endl;
+
+	int repetitions = 1000000;
+	for(int i = 0; i < repetitions; ++i)
+		cgFunction(args);
+	
 	return 0;
 }
 
