@@ -188,11 +188,10 @@ public:
 	private:
 	void SetXmmVar(AsmJit::X86Compiler &c, AsmJit::XmmVar &v, double d){
 		using namespace AsmJit;
-        GpVar half(c.newGpVar());
-        uint64_t *i = reinterpret_cast<uint64_t*>(&d);
-        c.mov(half, i[0]);
-        c.movq(v, half);
-        c.unuse(half);
+        GpVar tmp(c.newGpVar());
+        c.mov(tmp, d);
+        c.movq(v, tmp);
+        c.unuse(tmp);
 	}
 
 };
