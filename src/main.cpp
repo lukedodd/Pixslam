@@ -34,7 +34,13 @@ public:
 		
 		stbi_image_free(datauc);
 	}
+
+	Image(int w, int h) : w(w), h(h), ownsData(true){
+		data = new PixType[w*h];
+		std::fill(data, data+(w*h), 0.0);
+	}
 	
+
 	int width() const {return w;}
 	int height() const {return h;}
 
@@ -182,13 +188,23 @@ class CodeGenCalculatorFunction : public Visitor<AsmJit::XmmVar>{
 private:
 	typedef std::function<AsmJit::XmmVar (const std::vector<AsmJit::XmmVar> &)> 
 	        BuiltInFunctionHandler;
+
+	typedef const double * const * Arguments;
 	std::map<std::string, BuiltInFunctionHandler> functionHandlerMap;
 
 	AsmJit::X86Compiler compiler;
 	std::map<std::string, int> argNameToIndex;
 
-	typedef double (*FuncPtrType)(const double * args);
+	typedef void (*FuncPtrType)(Arguments, size_t, size_t, double *);
 	FuncPtrType generatedFunction;
+
+	AsmJit::GpVar currentIndex;
+	AsmJit::GpVar w;
+	AsmJit::GpVar h;
+	AsmJit::GpVar n;
+	AsmJit::GpVar out;
+	std::vector<AsmJit::GpVar> argv;
+
 public:
 	CodeGenCalculatorFunction(const std::vector<std::string> &names, const Cell &cell){
 		using namespace AsmJit;
@@ -223,17 +239,47 @@ public:
 
 
 	FuncPtrType generate(const Cell &c){
+		using namespace AsmJit;
 		compiler.newFunc(AsmJit::kX86FuncConvDefault, 
-		                 AsmJit::FuncBuilder1<double, const double *>());
-		AsmJit::XmmVar retVar = eval(c);
-		compiler.ret(retVar);
+		                 AsmJit::FuncBuilder4<void, Arguments, size_t, size_t, double *>());
+
+
+		GpVar pargv = compiler.getGpArg(0);
+		for(int i = 0; i < argNameToIndex.size(); ++i){
+			argv.push_back(compiler.newGpVar());
+			compiler.mov(argv.back(), ptr(pargv, i*sizeof(double)));
+		}
+				
+		w = compiler.getGpArg(1);
+		h = compiler.getGpArg(2);
+		out = compiler.getGpArg(3);
+
+		// Perpare loop vars
+		n = compiler.newGpVar();
+		compiler.mov(n, w);
+		compiler.imul(n, h);
+		currentIndex = compiler.newGpVar();
+		compiler.mov(currentIndex, imm(0));
+
+		// for current index = 0..n
+		Label startLoop(compiler.newLabel());
+		compiler.bind(startLoop);
+		{
+			// im(index) = f(x)
+			AsmJit::XmmVar retVar = eval(c);
+			compiler.movq(ptr(out, currentIndex, kScale8Times), retVar);
+			compiler.add(currentIndex, imm(1));
+		}
+		compiler.cmp(currentIndex, n);
+		compiler.jne(startLoop);
+
 		compiler.endFunc();
 		return reinterpret_cast<FuncPtrType>(compiler.make());
-		
+
 	}
 
-	double operator()(const std::vector<double> &args) const {
-		return generatedFunction(&args[0]); 
+	void operator()(const std::vector<const double *> &args, int w, int h, double *out) const {
+		generatedFunction(&args[0], w, h, out); 
 	}
 
 	virtual ~CodeGenCalculatorFunction(){}
@@ -252,17 +298,15 @@ protected:
 		return xVar;
 	};
 
+	// Use of an argument as a symbol not a function call 
+	// is equivanlent to x_i_j
 	virtual AsmJit::XmmVar symbolHandler(const std::string &name){
-			// Lookup name in args and return AsmJit variable
-			// with the arg loaded in.
-			// TODO: this could be more efficient - could
-			// create one list of XmmVars and use that.
-			using namespace AsmJit;
-			GpVar ptr(compiler.getGpArg(0));
-			XmmVar v(compiler.newXmmVar());
-			int offset = argNameToIndex.at(name)*sizeof(double);
-			compiler.movsd(v, Mem(ptr, offset));
-			return v;
+		using namespace AsmJit;
+
+		GpVar pImage = argv[argNameToIndex.at(name)];
+		XmmVar v(compiler.newXmmVar());
+		compiler.movsd(v, ptr(pImage, currentIndex, kScale8Times));
+		return v;
 	};
 
 private:
@@ -391,28 +435,28 @@ int main (int argc, char *argv[])
 		outputImage = argv[2];
 
 	Image im(argv[1]);
+	Image out(im.width(), im.height());
 	
 	// repl(">");
 	std::vector<std::string> argNames(1, "x");
 	std::vector<double> args(1, 1.5);
-	std::string functionCode = "(* x 2)";
+	std::string functionCode = "(/ x 2)";
 	Cell functionCell = read(functionCode);
 
 	CalculatorFunction function(argNames, functionCell);
 	CodeGenCalculatorFunction cgFunction(argNames, functionCell);
 
 	std::cout << "Interpreted output: " << function(args) << std::endl;
-	std::cout << "Code gen output: " << cgFunction(args) << std::endl;
+	// std::cout << "Code gen output: " << cgFunction(args) << std::endl;
 
-	for(int i = 0; i < im.width(); ++i){
-		for(int j = 0; j < im.height(); ++j){
-			args[0] = im(i,j);
-			im(i,j) = cgFunction(args);
-			// im(i,j) = function(args);
-		}
-	}
+	std::vector<const double*> imArgs;
+	imArgs.push_back(im.getData());
 
-	im.write(outputImage);
+	std::cout << "Calling function." << std::endl;
+	cgFunction(imArgs, im.width(), im.height(), out.getData());
+
+	std::cout << "Writing image." << std::endl;
+	out.write(outputImage);
 	
 	return 0;
 }
