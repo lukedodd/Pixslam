@@ -20,6 +20,7 @@ class Image{
 private:
 	PixType *data;
 	int w, h;
+	int stride;
 	bool ownsData;
 public:
 
@@ -27,6 +28,7 @@ public:
 		int n;
 		// load image as greyscale
 		unsigned char *datauc = stbi_load(path.c_str(), &w, &h, &n, 1);
+		stride = w;
 
 		data = new PixType[w*h];
 		for(int i = 0; i < w*h; ++i)
@@ -35,9 +37,14 @@ public:
 		stbi_image_free(datauc);
 	}
 
-	Image(int w, int h) : w(w), h(h), ownsData(true){
+	Image(int w, int h) : w(w), h(h), stride(w), ownsData(true){
 		data = new PixType[w*h];
 		std::fill(data, data+(w*h), 0.0);
+	}
+
+	Image(PixType *data, int w, int h, int stride)
+	 : ownsData(false), data(data), w(w), h(h), stride(w)
+	{
 	}
 	
 
@@ -45,11 +52,11 @@ public:
 	int height() const {return h;}
 
 	PixType &operator()(int i, int j){
-		return data[i*w +j];
+		return data[i*stride +j];
 	}
 
 	const PixType &operator()(int i, int j) const {
-		return data[i*w +j];
+		return data[i*stride +j];
 	}
 
 	PixType *getData(){
@@ -195,12 +202,16 @@ private:
 	AsmJit::X86Compiler compiler;
 	std::map<std::string, int> argNameToIndex;
 
-	typedef void (*FuncPtrType)(Arguments, size_t, size_t, double *);
+	typedef void (*FuncPtrType)(Arguments, size_t, size_t, size_t, double *);
 	FuncPtrType generatedFunction;
 
+	AsmJit::GpVar currentI;
+	AsmJit::GpVar currentJ;
 	AsmJit::GpVar currentIndex;
+
 	AsmJit::GpVar w;
 	AsmJit::GpVar h;
+	AsmJit::GpVar stride;
 	AsmJit::GpVar n;
 	AsmJit::GpVar out;
 	std::vector<AsmJit::GpVar> argv;
@@ -241,7 +252,7 @@ public:
 	FuncPtrType generate(const Cell &c){
 		using namespace AsmJit;
 		compiler.newFunc(AsmJit::kX86FuncConvDefault, 
-		                 AsmJit::FuncBuilder4<void, Arguments, size_t, size_t, double *>());
+		                 AsmJit::FuncBuilder5<void, Arguments, size_t, size_t, size_t, double *>());
 
 
 		GpVar pargv = compiler.getGpArg(0);
@@ -252,7 +263,8 @@ public:
 				
 		w = compiler.getGpArg(1);
 		h = compiler.getGpArg(2);
-		out = compiler.getGpArg(3);
+		stride = compiler.getGpArg(3);
+		out = compiler.getGpArg(4);
 
 		// Perpare loop vars
 		n = compiler.newGpVar();
@@ -261,25 +273,40 @@ public:
 		currentIndex = compiler.newGpVar();
 		compiler.mov(currentIndex, imm(0));
 
-		// for current index = 0..n
+		currentI = compiler.newGpVar();
+		currentJ = compiler.newGpVar();
+		compiler.mov(currentI, imm(0));
+		compiler.mov(currentJ, imm(0));
+
+		// for i = 0..h
+		// for j = 0..w
 		Label startLoop(compiler.newLabel());
 		compiler.bind(startLoop);
 		{
+			compiler.mov(currentIndex, currentI);
+			compiler.imul(currentIndex, stride);
+			compiler.add(currentIndex, currentJ);
 			// im(index) = f(x)
 			AsmJit::XmmVar retVar = eval(c);
 			compiler.movq(ptr(out, currentIndex, kScale8Times), retVar);
-			compiler.add(currentIndex, imm(1));
+						
 		}
-		compiler.cmp(currentIndex, n);
+		compiler.add(currentJ, imm(1));
+		compiler.cmp(currentJ, w);
 		compiler.jne(startLoop);
+		compiler.mov(currentJ, imm(0));
+		compiler.add(currentI, imm(1));
+		compiler.cmp(currentI, h);
+		compiler.jne(startLoop);
+
 
 		compiler.endFunc();
 		return reinterpret_cast<FuncPtrType>(compiler.make());
 
 	}
 
-	void operator()(const std::vector<const double *> &args, int w, int h, double *out) const {
-		generatedFunction(&args[0], w, h, out); 
+	void operator()(const std::vector<const double *> &args, int w, int h, int stride, double *out) const {
+		generatedFunction(&args[0], w, h, stride, out); 
 	}
 
 	virtual ~CodeGenCalculatorFunction(){}
@@ -440,7 +467,7 @@ int main (int argc, char *argv[])
 	// repl(">");
 	std::vector<std::string> argNames(1, "x");
 	std::vector<double> args(1, 1.5);
-	std::string functionCode = "(/ x 2)";
+	std::string functionCode = "(* x 2)";
 	Cell functionCell = read(functionCode);
 
 	CalculatorFunction function(argNames, functionCell);
@@ -453,7 +480,7 @@ int main (int argc, char *argv[])
 	imArgs.push_back(im.getData());
 
 	std::cout << "Calling function." << std::endl;
-	cgFunction(imArgs, im.width(), im.height(), out.getData());
+	cgFunction(imArgs, im.width(), im.height(), im.width(), out.getData());
 
 	std::cout << "Writing image." << std::endl;
 	out.write(outputImage);
