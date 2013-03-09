@@ -316,7 +316,39 @@ protected:
 
 	virtual AsmJit::XmmVar functionHandler(const std::string &functionName, 
 	                                       const std::vector<AsmJit::XmmVar> &args){
-		return functionHandlerMap.at(functionName)(args);
+	    using namespace AsmJit;
+
+		// try builtin function lookup first
+	    auto it = functionHandlerMap.find(functionName);
+		if(it != functionHandlerMap.end()){
+			return it->second(args);
+		}
+
+		GpVar i = compiler.newGpVar();
+		GpVar j = compiler.newGpVar();
+		compiler.mov(i, currentI);
+		compiler.mov(j, currentJ);
+
+		GpVar iOffset = compiler.newGpVar();
+		GpVar jOffset = compiler.newGpVar();
+		// arg evals will ahave been evaled... lets just convert double to int for now
+		compiler.cvtsd2si(iOffset, args[0]);
+		compiler.cvtsd2si(jOffset, args[1]);
+
+		compiler.add(i, iOffset);
+		compiler.add(j, jOffset);
+
+		GpVar index = compiler.newGpVar();
+		compiler.mov(index, i);
+		compiler.imul(index, stride);
+		compiler.add(index, j);
+
+		GpVar pImage = argv[argNameToIndex.at(functionName)];
+
+		XmmVar v(compiler.newXmmVar());
+		// compiler.movsd(v, ptr(pImage, currentIndex, kScale8Times));
+		 compiler.movsd(v, ptr(pImage, index, kScale8Times));
+		return v;
 	}
 
 	virtual AsmJit::XmmVar numberHandler(const std::string &number){
@@ -467,13 +499,14 @@ int main (int argc, char *argv[])
 	// repl(">");
 	std::vector<std::string> argNames(1, "x");
 	std::vector<double> args(1, 1.5);
-	std::string functionCode = "(* x 2)";
+	std::string functionCode = "(/ (+ (+ (x 0 -1) (x 0 1)) (x 0 2)) 3)";
+	// functionCode = "(x 0 0)";
 	Cell functionCell = read(functionCode);
 
-	CalculatorFunction function(argNames, functionCell);
+	// CalculatorFunction function(argNames, functionCell);
 	CodeGenCalculatorFunction cgFunction(argNames, functionCell);
 
-	std::cout << "Interpreted output: " << function(args) << std::endl;
+	// std::cout << "Interpreted output: " << function(args) << std::endl;
 	// std::cout << "Code gen output: " << cgFunction(args) << std::endl;
 
 
