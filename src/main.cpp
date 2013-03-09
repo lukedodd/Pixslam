@@ -347,10 +347,20 @@ void repl(const std::string & prompt )
     */
 }
 
-int main ()
+int main (int argc, char *argv[])
 {
-	Image im("/home/luke/projects/pixslam/example_data/lena.png");
-	im.write("test.png");
+	std::string outputImage = "out.png";
+
+	if(argc < 2){
+		std::cout << "Please supply an input image! \n";
+		return 1;
+	}
+	
+	if(argc >= 3)
+		outputImage = argv[2];
+
+	Image im(argv[1]);
+	im.write(outputImage);
 	
 	// repl(">");
 	std::vector<std::string> argNames = {"x", "y", "z"};
