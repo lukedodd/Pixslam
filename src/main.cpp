@@ -82,18 +82,6 @@ struct Cell{
 
 template <typename EvalReturn> class Visitor{
 public:
-	typedef std::map<std::string, std::function<EvalReturn (const std::vector<EvalReturn> &)>> 
-		FunctionMap;
-
-	typedef std::function<EvalReturn (const std::string &symbol)> SymbolHandler;
-	typedef std::function<EvalReturn (const std::string &number)> NumberHandler;
-
-protected:
-FunctionMap functionMap;
-NumberHandler numberHandler;
-SymbolHandler symbolHandler;
-
-public:
 	Visitor(){
 	}
 
@@ -103,44 +91,64 @@ public:
 				return numberHandler(c.val.c_str());
 			}case Cell::List:{
 				std::vector<EvalReturn> evalArgs(c.list.size()-1);
+
 				// eval each argument
 				std::transform(c.list.begin()+1, c.list.end(), evalArgs.begin(), 
 					[=](const Cell &c) -> EvalReturn{
 						return this->eval(c);
 					}
 				);
-				// call function specified by sumbol map with evaled arguments
-				return functionMap.at(c.list[0].val)(evalArgs);
+
+				return functionHandler(c.list[0].val, evalArgs);
 			}case Cell::Symbol:{
-				if(symbolHandler)
-					return symbolHandler(c.val);
-				else
-					std::runtime_error("Cannot handle symbol.");
+				return symbolHandler(c.val);
 			}
-			std::runtime_error("Should never get here.");
+			throw std::runtime_error("Should never get here.");
 		}
 	}
+
+	virtual ~Visitor(){}
+
+protected:
+	virtual EvalReturn symbolHandler(const std::string &symbol) = 0;
+	virtual EvalReturn functionHandler(const std::string &functionName, 
+	                                   const std::vector<EvalReturn> &args) = 0;
+	virtual EvalReturn numberHandler(const std::string &number) = 0;
 
 };
 
 class Calculator : public Visitor<double>{
+	typedef std::function<double (const std::vector<double> &)> BuiltInFunctionHandler;
+	std::map<std::string, BuiltInFunctionHandler> functionHandlerMap;
 public:
 	Calculator(){
 		// standard functions
-		functionMap["+"] = [](const std::vector<double> &d){return d[0] + d[1];};
-		functionMap["-"] = [](const std::vector<double> &d){return d[0] - d[1];};
-		functionMap["/"] = [](const std::vector<double> &d){return d[0] / d[1];};
-		functionMap["*"] = [](const std::vector<double> &d){return d[0] * d[1];};
-		functionMap["sin"] = [](const std::vector<double> &d){return std::sin(d[0]);};
-		functionMap["cos"] = [](const std::vector<double> &d){return std::cos(d[0]);};
-		functionMap["tan"] = [](const std::vector<double> &d){return std::tan(d[0]);};
-		functionMap["pow"] = [](const std::vector<double> &d){return std::pow(d[0], d[1]);};
+		functionHandlerMap["+"] = [](const std::vector<double> &d){return d[0] + d[1];};
+		functionHandlerMap["-"] = [](const std::vector<double> &d){return d[0] - d[1];};
+		functionHandlerMap["/"] = [](const std::vector<double> &d){return d[0] / d[1];};
+		functionHandlerMap["*"] = [](const std::vector<double> &d){return d[0] * d[1];};
+		functionHandlerMap["sin"] = [](const std::vector<double> &d){return std::sin(d[0]);};
+		functionHandlerMap["cos"] = [](const std::vector<double> &d){return std::cos(d[0]);};
+		functionHandlerMap["tan"] = [](const std::vector<double> &d){return std::tan(d[0]);};
+		functionHandlerMap["pow"] = [](const std::vector<double> &d){return std::pow(d[0], d[1]);};
 
-		numberHandler = [](const std::string &number){
-			return std::atof(number.c_str());
-		};
+	}
 
+	virtual ~Calculator(){}
 
+protected:
+
+	virtual double functionHandler(const std::string &functionName, 
+	                               const std::vector<double> &args){
+		return functionHandlerMap.at(functionName)(args);
+	}
+
+	virtual double numberHandler(const std::string &number){
+		return std::atof(number.c_str());
+	}
+
+	virtual double symbolHandler(const std::string &symbol){
+		throw std::runtime_error("Cannot handle symbol.");
 	}
 
 };
@@ -148,6 +156,7 @@ public:
 class CalculatorFunction : public Calculator{
 private:
 	std::map<std::string, int> argNameToIndex;
+	std::vector<double> inputArgs;
 	Cell cell;
 public:
 	CalculatorFunction(const std::vector<std::string> &names, const Cell &c) : cell(c){
@@ -156,17 +165,25 @@ public:
 	}
 
 	double operator()(const std::vector<double> &args){
-		symbolHandler = [&](const std::string &name) -> double{
-			return args[this->argNameToIndex[name]];	
-		};
-
+		inputArgs = args;
 		return eval(cell);
+	}
+
+	virtual ~CalculatorFunction(){}
+
+protected:
+	virtual double symbolHandler(const std::string &symbol){
+		return inputArgs[this->argNameToIndex[symbol]];	
 	}
 };
 
 	
 class CodeGenCalculatorFunction : public Visitor<AsmJit::XmmVar>{
 private:
+	typedef std::function<AsmJit::XmmVar (const std::vector<AsmJit::XmmVar> &)> 
+	        BuiltInFunctionHandler;
+	std::map<std::string, BuiltInFunctionHandler> functionHandlerMap;
+
 	AsmJit::X86Compiler compiler;
 	std::map<std::string, int> argNameToIndex;
 
@@ -176,57 +193,34 @@ public:
 	CodeGenCalculatorFunction(const std::vector<std::string> &names, const Cell &cell){
 		using namespace AsmJit;
 		
-		functionMap["+"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
-			// XmmVar resultVar(compiler.newXmmVar());
+		functionHandlerMap["+"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
 			compiler.addsd(args[0], args[1]);
-			// compiler.movq(resultVar, args[0]);
 			return args[0];
 		};
 	
-		functionMap["-"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
+		functionHandlerMap["-"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
 			compiler.subsd(args[0], args[1]);
 			return args[0];
 		};
 	
-		functionMap["*"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
+		functionHandlerMap["*"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
 			compiler.mulsd(args[0], args[1]);
 			return args[0];
 		};
 	
-		functionMap["/"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
+		functionHandlerMap["/"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
 			compiler.divsd(args[0], args[1]);
 			return args[0];
 		};
 
 
-		// functionMap["-"] = [](const std::vector<double> &d){return d[0] - d[1];};
-		// functionMap["/"] = [](const std::vector<double> &d){return d[0] / d[1];};
-		// functionMap["*"] = [](const std::vector<double> &d){return d[0] * d[1];};
-
-		numberHandler = [&](const std::string &number) -> XmmVar{
-			double x = std::atof(number.c_str());
-			XmmVar xVar(compiler.newXmmVar());
-			SetXmmVar(compiler, xVar, x);
-			return xVar;
-		};
-
 		for(int i = 0; i < names.size(); ++i)
 			argNameToIndex[names[i]] = i;
 
-		symbolHandler = [&](const std::string name) -> XmmVar{
-			// Lookup name in args and return AsmJit variable
-			// with the arg loaded in.
-			// TODO: this could be more efficient - could
-			// create one list of XmmVars and use that.
-			GpVar ptr(compiler.getGpArg(0));
-			XmmVar v(compiler.newXmmVar());
-			int offset = argNameToIndex.at(name)*sizeof(double);
-			compiler.movsd(v, Mem(ptr, offset));
-			return v;
-		};
-
+	
 		generatedFunction = generate(cell);
 	}
+
 
 	FuncPtrType generate(const Cell &c){
 		compiler.newFunc(AsmJit::kX86FuncConvDefault, 
@@ -242,16 +236,43 @@ public:
 		return generatedFunction(&args[0]); 
 	}
 
-	private:
+	virtual ~CodeGenCalculatorFunction(){}
+
+protected:
+
+	virtual AsmJit::XmmVar functionHandler(const std::string &functionName, 
+	                                       const std::vector<AsmJit::XmmVar> &args){
+		return functionHandlerMap.at(functionName)(args);
+	}
+
+	virtual AsmJit::XmmVar numberHandler(const std::string &number){
+		double x = std::atof(number.c_str());
+		AsmJit::XmmVar xVar(compiler.newXmmVar());
+		SetXmmVar(compiler, xVar, x);
+		return xVar;
+	};
+
+	virtual AsmJit::XmmVar symbolHandler(const std::string &name){
+			// Lookup name in args and return AsmJit variable
+			// with the arg loaded in.
+			// TODO: this could be more efficient - could
+			// create one list of XmmVars and use that.
+			using namespace AsmJit;
+			GpVar ptr(compiler.getGpArg(0));
+			XmmVar v(compiler.newXmmVar());
+			int offset = argNameToIndex.at(name)*sizeof(double);
+			compiler.movsd(v, Mem(ptr, offset));
+			return v;
+	};
+
+private:
 	void SetXmmVar(AsmJit::X86Compiler &c, AsmJit::XmmVar &v, double d){
 		using namespace AsmJit;
-		/*
 		// I thought this was better, but it didn't actually work...
-        GpVar tmp(c.newGpVar());
-        c.mov(tmp, d);
-        c.movq(v, tmp);
-        c.unuse(tmp);
-        */
+        // GpVar tmp(c.newGpVar());
+        // c.mov(tmp, d);
+        // c.movq(v, tmp);
+        // c.unuse(tmp);
 
 		GpVar half(c.newGpVar());
         uint64_t *i = reinterpret_cast<uint64_t*>(&d);
@@ -374,7 +395,7 @@ int main (int argc, char *argv[])
 	// repl(">");
 	std::vector<std::string> argNames(1, "x");
 	std::vector<double> args(1, 1.5);
-	std::string functionCode = "(/ x 2)";
+	std::string functionCode = "(* x 2)";
 	Cell functionCell = read(functionCode);
 
 	CalculatorFunction function(argNames, functionCell);
@@ -387,6 +408,7 @@ int main (int argc, char *argv[])
 		for(int j = 0; j < im.height(); ++j){
 			args[0] = im(i,j);
 			im(i,j) = cgFunction(args);
+			// im(i,j) = function(args);
 		}
 	}
 
