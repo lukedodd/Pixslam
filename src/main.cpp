@@ -56,8 +56,9 @@ public:
 
 	void write(const std::string &dest) const {
 		std::vector<unsigned char> datauc(w*h);
+
 		for(int i = 0; i < w*h; ++i)
-			datauc[i] = (unsigned char)(data[i]);
+			datauc[i] = (unsigned char)(std::max(std::min(data[i], 255.0), 0.0));
 
 		stbi_write_png(dest.c_str(), w, h, 1, &datauc[0], w);
 	}
@@ -244,10 +245,19 @@ public:
 	private:
 	void SetXmmVar(AsmJit::X86Compiler &c, AsmJit::XmmVar &v, double d){
 		using namespace AsmJit;
+		/*
+		// I thought this was better, but it didn't actually work...
         GpVar tmp(c.newGpVar());
         c.mov(tmp, d);
         c.movq(v, tmp);
         c.unuse(tmp);
+        */
+
+		GpVar half(c.newGpVar());
+        uint64_t *i = reinterpret_cast<uint64_t*>(&d);
+        c.mov(half, i[0]);
+        c.movq(v, half);
+        c.unuse(half);
 	}
 
 };
@@ -360,21 +370,27 @@ int main (int argc, char *argv[])
 		outputImage = argv[2];
 
 	Image im(argv[1]);
-	im.write(outputImage);
 	
 	// repl(">");
-	std::vector<std::string> argNames = {"x", "y", "z"};
-	std::vector<double> args = {1.5, 2.5};
-	std::string functionCode = ("(+ x (/ x (- y x)))");
+	std::vector<std::string> argNames(1, "x");
+	std::vector<double> args(1, 1.5);
+	std::string functionCode = "(/ x 2)";
 	Cell functionCell = read(functionCode);
+
 	CalculatorFunction function(argNames, functionCell);
 	CodeGenCalculatorFunction cgFunction(argNames, functionCell);
+
 	std::cout << "Interpreted output: " << function(args) << std::endl;
 	std::cout << "Code gen output: " << cgFunction(args) << std::endl;
 
-	int repetitions = 1000000;
-	for(int i = 0; i < repetitions; ++i)
-		cgFunction(args);
+	for(int i = 0; i < im.width(); ++i){
+		for(int j = 0; j < im.height(); ++j){
+			args[0] = im(i,j);
+			im(i,j) = cgFunction(args);
+		}
+	}
+
+	im.write(outputImage);
 	
 	return 0;
 }

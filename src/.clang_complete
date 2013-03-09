@@ -1,3 +1,4 @@
 -I.
+-I../libs/stb_image
 -I../libs/asmjit/src
 -std=c++0x
