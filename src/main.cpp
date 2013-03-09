@@ -20,7 +20,7 @@ class Image{
 private:
 	PixType *data;
 	int w, h;
-	int stride;
+	int s;
 	bool ownsData;
 public:
 
@@ -28,7 +28,7 @@ public:
 		int n;
 		// load image as greyscale
 		unsigned char *datauc = stbi_load(path.c_str(), &w, &h, &n, 1);
-		stride = w;
+		s = w;
 
 		data = new PixType[w*h];
 		for(int i = 0; i < w*h; ++i)
@@ -37,26 +37,27 @@ public:
 		stbi_image_free(datauc);
 	}
 
-	Image(int w, int h) : w(w), h(h), stride(w), ownsData(true){
+	Image(int w, int h) : w(w), h(h), s(w), ownsData(true){
 		data = new PixType[w*h];
 		std::fill(data, data+(w*h), 0.0);
 	}
 
-	Image(PixType *data, int w, int h, int stride)
-	 : ownsData(false), data(data), w(w), h(h), stride(w)
+	Image(PixType *data, int w, int h, int s)
+	 : ownsData(false), data(data), w(w), h(h), s(s)
 	{
 	}
 	
 
 	int width() const {return w;}
 	int height() const {return h;}
+	int stride() const {return s;}
 
 	PixType &operator()(int i, int j){
-		return data[i*stride +j];
+		return data[i*s +j];
 	}
 
 	const PixType &operator()(int i, int j) const {
-		return data[i*stride +j];
+		return data[i*s +j];
 	}
 
 	PixType *getData(){
@@ -462,7 +463,6 @@ int main (int argc, char *argv[])
 		outputImage = argv[2];
 
 	Image im(argv[1]);
-	Image out(im.width(), im.height());
 	
 	// repl(">");
 	std::vector<std::string> argNames(1, "x");
@@ -476,11 +476,21 @@ int main (int argc, char *argv[])
 	std::cout << "Interpreted output: " << function(args) << std::endl;
 	// std::cout << "Code gen output: " << cgFunction(args) << std::endl;
 
-	std::vector<const double*> imArgs;
-	imArgs.push_back(im.getData());
 
+	int border = 10;
+	Image imView(im.getData() + border*im.width() + border, 
+	             im.width() - border*2, im.height() - border*2,
+	             im.width());
+
+	Image out(im.width(), im.height());
+	Image outView(out.getData() + border*out.width() + border, 
+	              out.width() - border*2, out.height() - border*2,
+	              out.width());
+
+	std::vector<const double*> imArgs;
+	imArgs.push_back(imView.getData());
 	std::cout << "Calling function." << std::endl;
-	cgFunction(imArgs, im.width(), im.height(), im.width(), out.getData());
+	cgFunction(imArgs, imView.width(), imView.height(), imView.stride(), outView.getData());
 
 	std::cout << "Writing image." << std::endl;
 	out.write(outputImage);
