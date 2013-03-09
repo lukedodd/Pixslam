@@ -6,7 +6,7 @@ add_subdirectory(libs)
 # C++11
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11") 
 
-include_directories(${PIXSLAM_SOURCE_DIR}/src ${PIXSLAM_SOURCE_DIR}/libs/asmjit/src)
+include_directories(${PIXSLAM_SOURCE_DIR}/src ${PIXSLAM_SOURCE_DIR}/libs/asmjit/src ${PIXSLAM_SOURCE_DIR}/libs/stb_image)
 
 # aux_source_directory(src ${SOURCES})
 add_executable(pixslam src/main.cpp)

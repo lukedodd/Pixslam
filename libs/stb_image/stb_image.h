@@ -1,4 +1,4 @@
 #pragma once
 
 #define STBI_HEADER_FILE_ONLY
-#include "stb_images.c"
+#include "stb_image.c"

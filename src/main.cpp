@@ -11,7 +11,63 @@
 
 #include <asmjit/asmjit.h>
 
+#include <stb_image.h>
+#include <stb_image_write.h>
 
+
+typedef double PixType;
+class Image{
+private:
+	PixType *data;
+	int w, h;
+	bool ownsData;
+public:
+
+	Image(const std::string &path) : ownsData(true){
+		int n;
+		// load image as greyscale
+		unsigned char *datauc = stbi_load(path.c_str(), &w, &h, &n, 1);
+
+		data = new PixType[w*h];
+		for(int i = 0; i < w*h; ++i)
+			data[i] = datauc[i];
+		
+		stbi_image_free(datauc);
+	}
+	
+	int width() const {return w;}
+	int height() const {return h;}
+
+	PixType &operator()(int i, int j){
+		return data[i*w +j];
+	}
+
+	const PixType &operator()(int i, int j) const {
+		return data[i*w +j];
+	}
+
+	PixType *getData(){
+		return data;
+	}
+
+	const PixType *getData() const{
+		return data;
+	}
+
+	void write(const std::string &dest) const {
+		std::vector<unsigned char> datauc(w*h);
+		for(int i = 0; i < w*h; ++i)
+			datauc[i] = (unsigned char)(data[i]);
+
+		stbi_write_png(dest.c_str(), w, h, 1, &datauc[0], w);
+	}
+
+	~Image(){
+		if(ownsData)
+			delete [] data;	
+	}
+
+};
 
 struct Cell{
 	enum Type {Symbol, Number, List};
@@ -293,6 +349,9 @@ void repl(const std::string & prompt )
 
 int main ()
 {
+	Image im("/home/luke/projects/pixslam/example_data/lena.png");
+	im.write("test.png");
+	
 	// repl(">");
 	std::vector<std::string> argNames = {"x", "y", "z"};
 	std::vector<double> args = {1.5, 2.5};
