@@ -33,7 +33,7 @@ public:
         data = new PixType[w*h];
         for(int i = 0; i < w*h; ++i)
             data[i] = datauc[i];
-        
+
         stbi_image_free(datauc);
     }
 
@@ -43,10 +43,10 @@ public:
     }
 
     Image(PixType *data, int w, int h, int s)
-     : ownsData(false), data(data), w(w), h(h), s(s)
+        : data(data), w(w), h(h), s(s), ownsData(false)
     {
     }
-    
+
 
     int width() const {return w;}
     int height() const {return h;}
@@ -117,8 +117,8 @@ public:
             }case Cell::Symbol:{
                 return symbolHandler(c.val);
             }
-            throw std::runtime_error("Should never get here.");
         }
+        throw std::runtime_error("Should never get here.");
     }
 
     virtual ~Visitor(){}
@@ -126,12 +126,13 @@ public:
 protected:
     virtual EvalReturn symbolHandler(const std::string &symbol) = 0;
     virtual EvalReturn functionHandler(const std::string &functionName, 
-                                       const std::vector<EvalReturn> &args) = 0;
+            const std::vector<EvalReturn> &args) = 0;
     virtual EvalReturn numberHandler(const std::string &number) = 0;
 
 };
 
 class Calculator : public Visitor<double>{
+private:
     typedef std::function<double (const std::vector<double> &)> BuiltInFunctionHandler;
     std::map<std::string, BuiltInFunctionHandler> functionHandlerMap;
 public:
@@ -153,7 +154,7 @@ public:
 protected:
 
     virtual double functionHandler(const std::string &functionName, 
-                                   const std::vector<double> &args){
+            const std::vector<double> &args){
         return functionHandlerMap.at(functionName)(args);
     }
 
@@ -169,12 +170,12 @@ protected:
 
 class CalculatorFunction : public Calculator{
 private:
-    std::map<std::string, int> argNameToIndex;
+    std::map<std::string, size_t> argNameToIndex;
     std::vector<double> inputArgs;
     Cell cell;
 public:
     CalculatorFunction(const std::vector<std::string> &names, const Cell &c) : cell(c){
-        for(int i = 0; i < names.size(); ++i)
+        for(size_t i = 0; i < names.size(); ++i)
             argNameToIndex[names[i]] = i;
     }
 
@@ -191,17 +192,17 @@ protected:
     }
 };
 
-    
+
 class CodeGenCalculatorFunction : public Visitor<AsmJit::XmmVar>{
 private:
     typedef std::function<AsmJit::XmmVar (const std::vector<AsmJit::XmmVar> &)> 
-            BuiltInFunctionHandler;
+        BuiltInFunctionHandler;
 
     typedef const double * const * Arguments;
     std::map<std::string, BuiltInFunctionHandler> functionHandlerMap;
 
     AsmJit::X86Compiler compiler;
-    std::map<std::string, int> argNameToIndex;
+    std::map<std::string, size_t> argNameToIndex;
 
     typedef void (*FuncPtrType)(Arguments, size_t, size_t, size_t, double *);
     FuncPtrType generatedFunction;
@@ -220,32 +221,32 @@ private:
 public:
     CodeGenCalculatorFunction(const std::vector<std::string> &names, const Cell &cell){
         using namespace AsmJit;
-        
+
         functionHandlerMap["+"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
             compiler.addsd(args[0], args[1]);
             return args[0];
         };
-    
+
         functionHandlerMap["-"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
             compiler.subsd(args[0], args[1]);
             return args[0];
         };
-    
+
         functionHandlerMap["*"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
             compiler.mulsd(args[0], args[1]);
             return args[0];
         };
-    
+
         functionHandlerMap["/"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
             compiler.divsd(args[0], args[1]);
             return args[0];
         };
 
 
-        for(int i = 0; i < names.size(); ++i)
+        for(size_t i = 0; i < names.size(); ++i)
             argNameToIndex[names[i]] = i;
 
-    
+
         generatedFunction = generate(cell);
     }
 
@@ -253,15 +254,15 @@ public:
     FuncPtrType generate(const Cell &c){
         using namespace AsmJit;
         compiler.newFunc(AsmJit::kX86FuncConvDefault, 
-                         AsmJit::FuncBuilder5<void, Arguments, size_t, size_t, size_t, double *>());
+                AsmJit::FuncBuilder5<void, Arguments, size_t, size_t, size_t, double *>());
 
 
         GpVar pargv = compiler.getGpArg(0);
-        for(int i = 0; i < argNameToIndex.size(); ++i){
+        for(size_t i = 0; i < argNameToIndex.size(); ++i){
             argv.push_back(compiler.newGpVar());
             compiler.mov(argv.back(), ptr(pargv, i*sizeof(double)));
         }
-                
+
         w = compiler.getGpArg(1);
         h = compiler.getGpArg(2);
         stride = compiler.getGpArg(3);
@@ -290,7 +291,7 @@ public:
             // im(index) = f(x)
             AsmJit::XmmVar retVar = eval(c);
             compiler.movq(ptr(out, currentIndex, kScale8Times), retVar);
-                        
+
         }
         compiler.add(currentJ, imm(1));
         compiler.cmp(currentJ, w);
@@ -315,7 +316,7 @@ public:
 protected:
 
     virtual AsmJit::XmmVar functionHandler(const std::string &functionName, 
-                                           const std::vector<AsmJit::XmmVar> &args){
+            const std::vector<AsmJit::XmmVar> &args){
         using namespace AsmJit;
 
         // try builtin function lookup first
@@ -347,7 +348,7 @@ protected:
 
         XmmVar v(compiler.newXmmVar());
         // compiler.movsd(v, ptr(pImage, currentIndex, kScale8Times));
-         compiler.movsd(v, ptr(pImage, index, kScale8Times));
+        compiler.movsd(v, ptr(pImage, index, kScale8Times));
         return v;
     }
 
@@ -372,18 +373,12 @@ protected:
 private:
     void SetXmmVar(AsmJit::X86Compiler &c, AsmJit::XmmVar &v, double d){
         using namespace AsmJit;
-
         // I thought this was better, but it didn't actually work...
-        // GpVar tmp(c.newGpVar());
-        // c.mov(tmp, d);
-        // c.movq(v, tmp);
-        // c.unuse(tmp);
-
-        GpVar half(c.newGpVar());
+        GpVar gpreg(c.newGpVar());
         uint64_t *i = reinterpret_cast<uint64_t*>(&d);
-        c.mov(half, i[0]);
-        c.movq(v, half);
-        c.unuse(half);
+        c.mov(gpreg, i[0]);
+        c.movq(v, gpreg);
+        c.unuse(gpreg);
     }
 
 };
@@ -467,21 +462,21 @@ std::string to_string(const Cell & exp)
 }
 
 // read-eval-print-loop
+/*
 void repl(const std::string & prompt )
 {
-    /*
-    Calculator calc;
-    for (;;) {
-        CodeGenCalculator cgcalc;
-        std::cout << prompt;
-        std::string line; std::getline(std::cin, line);
-        Cell cell = read(line);
-        std::cout << calc.eval(read(line)) << '\n';
-        // std::function<double (void)> f = cgcalc.generate(read(line));
-        std::cout << "code gen " << f() << '\n';
+       Calculator calc;
+       for (;;) {
+       CodeGenCalculator cgcalc;
+       std::cout << prompt;
+       std::string line; std::getline(std::cin, line);
+       Cell cell = read(line);
+       std::cout << calc.eval(read(line)) << '\n';
+    // std::function<double (void)> f = cgcalc.generate(read(line));
+    std::cout << "code gen " << f() << '\n';
     }
-    */
 }
+*/
 
 int main (int argc, char *argv[])
 {
@@ -491,16 +486,16 @@ int main (int argc, char *argv[])
         std::cout << "Please supply an input image! \n";
         return 1;
     }
-    
+
     if(argc >= 3)
         outputImage = argv[2];
 
     Image im(argv[1]);
-    
+
     // repl(">");
     std::vector<std::string> argNames(1, "x");
     std::vector<double> args(1, 1.5);
-    std::string functionCode = "(/ (+ (+ (x 0 -1) (x 0 1)) (x 0 2)) 3)";
+    std::string functionCode = "(/ (+ (+ (x 0 -1) (x 0 1)) (x 0 2)) 1.5)";
     // functionCode = "(x 0 0)";
     Cell functionCell = read(functionCode);
 
@@ -513,13 +508,13 @@ int main (int argc, char *argv[])
 
     int border = 10;
     Image imView(im.getData() + border*im.width() + border, 
-                 im.width() - border*2, im.height() - border*2,
-                 im.width());
+            im.width() - border*2, im.height() - border*2,
+            im.width());
 
     Image out(im.width(), im.height());
     Image outView(out.getData() + border*out.width() + border, 
-                  out.width() - border*2, out.height() - border*2,
-                  out.width());
+            out.width() - border*2, out.height() - border*2,
+            out.width());
 
     std::vector<const double*> imArgs;
     imArgs.push_back(imView.getData());
@@ -528,7 +523,7 @@ int main (int argc, char *argv[])
 
     std::cout << "Writing image." << std::endl;
     out.write(outputImage);
-    
+
     return 0;
 }
 
