@@ -33,7 +33,7 @@ public:
 
         data = new PixType[w*h];
         for(int i = 0; i < w*h; ++i)
-            data[i] = datauc[i];
+            data[i] = datauc[i]/255.0;
 
         stbi_image_free(datauc);
     }
@@ -72,8 +72,10 @@ public:
     void write(const std::string &dest) const {
         std::vector<unsigned char> datauc(w*h);
 
-        for(int i = 0; i < w*h; ++i)
-            datauc[i] = (unsigned char)(std::max(std::min(data[i], 255.0), 0.0));
+        for(int i = 0; i < w; ++i)
+            for(int j = 0; j < h; ++j)
+                datauc[i*w + j] = (unsigned char)(std::max(
+                                  std::min((*this)(i,j)*255.0, 255.0), 0.0));
 
         stbi_write_png(dest.c_str(), w, h, 1, &datauc[0], w);
     }
@@ -217,6 +219,9 @@ private:
     AsmJit::GpVar stride;
     AsmJit::GpVar n;
     AsmJit::GpVar out;
+
+    AsmJit::XmmVar zero;
+    AsmJit::XmmVar one;
     std::vector<AsmJit::GpVar> argv;
 
 public:
@@ -271,6 +276,31 @@ public:
             return args[0];
         };
 
+        functionHandlerMap["<"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
+            compiler.cmpsd(args[0], args[1], 1);
+            compiler.andpd(args[0], one);
+            return args[0];
+        };
+
+        functionHandlerMap[">"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
+            compiler.cmpsd(args[1], args[0], 1);
+            compiler.andpd(args[1], one);
+            return args[1];
+        };
+
+        functionHandlerMap["<="] = [&](const std::vector<XmmVar> &args) -> XmmVar{
+            compiler.cmpsd(args[0], args[1], 2);
+            compiler.andpd(args[0], one);
+            return args[0];
+        };
+
+        functionHandlerMap[">="] = [&](const std::vector<XmmVar> &args) -> XmmVar{
+            compiler.cmpsd(args[1], args[0], 2);
+            compiler.andpd(args[1], one);
+            return args[1];
+        };
+
+
 
 
         for(size_t i = 0; i < names.size(); ++i)
@@ -292,6 +322,11 @@ public:
             argv.push_back(compiler.newGpVar());
             compiler.mov(argv.back(), ptr(pargv, i*sizeof(double)));
         }
+
+        zero = compiler.newXmmVar();
+        one = compiler.newXmmVar();
+        SetXmmVar(compiler, zero, 0.0);
+        SetXmmVar(compiler, one, 1.0);
 
         w = compiler.getGpArg(1);
         h = compiler.getGpArg(2);
@@ -318,7 +353,7 @@ public:
             compiler.mov(currentIndex, currentI);
             compiler.imul(currentIndex, stride);
             compiler.add(currentIndex, currentJ);
-            // im(index) = f(x)
+            // im(i,j) = f(x)
             AsmJit::XmmVar retVar = eval(c);
             compiler.movq(ptr(out, currentIndex, kScale8Times), retVar);
 
@@ -355,6 +390,7 @@ protected:
             return it->second(args);
         }
 
+        // Otherwise they must have been doing an image lookup...
         GpVar i = compiler.newGpVar();
         GpVar j = compiler.newGpVar();
         compiler.mov(i, currentI);
@@ -362,7 +398,9 @@ protected:
 
         GpVar iOffset = compiler.newGpVar();
         GpVar jOffset = compiler.newGpVar();
-        // arg evals will ahave been evaled... lets just convert double to int for now
+        
+        // Convert double to int for indexing
+        // TODO: figure out a better way.
         compiler.cvtsd2si(iOffset, args[0]);
         compiler.cvtsd2si(jOffset, args[1]);
 
@@ -374,10 +412,9 @@ protected:
         compiler.imul(index, stride);
         compiler.add(index, j);
 
+        
         GpVar pImage = argv[argNameToIndex.at(functionName)];
-
         XmmVar v(compiler.newXmmVar());
-        // compiler.movsd(v, ptr(pImage, currentIndex, kScale8Times));
         compiler.movsd(v, ptr(pImage, index, kScale8Times));
         return v;
     }
@@ -524,7 +561,9 @@ int main (int argc, char *argv[])
     // repl(">");
     std::vector<std::string> argNames(1, "x");
     std::vector<double> args(1, 1.5);
-    std::string functionCode = "(max (x -1 -1) (x -1 1) (x -1 2) (x 0 -1) (x 0 1) (x 0 2) (x 1 -1) (x 1 1) (x 1 2))";
+    // std::string functionCode = "x";
+    // std::string functionCode = "( - (max (x -1 -1) (x -1 1) (x -1 2) (x 0 -1) (x 0 1) (x 0 2) (x 1 -1) (x 1 1) (x 1 2)) (min (x -1 -1) (x -1 1) (x -1 2) (x 0 -1) (x 0 1) (x 0 2) (x 1 -1) (x 1 1) (x 1 2)))";
+    std::string functionCode = "(* (< 0.8 x) x)";
     // functionCode = "(x 0 0)";
     Cell functionCell = read(functionCode);
 
@@ -535,7 +574,7 @@ int main (int argc, char *argv[])
     // std::cout << "Code gen output: " << cgFunction(args) << std::endl;
 
 
-    int border = 10;
+    int border = 5;
     Image imView(im.getData() + border*im.width() + border, 
             im.width() - border*2, im.height() - border*2,
             im.width());
@@ -550,8 +589,15 @@ int main (int argc, char *argv[])
     std::cout << "Calling function." << std::endl;
     cgFunction(imArgs, imView.width(), imView.height(), imView.stride(), outView.getData());
 
+    /*
+    for(int i = imView.width(); ++i)
+        for(int j = imView.height(); ++j)
+            if(imView(i,j) < 0 || imView(i,j) > 1)
+                return 0;
+                */
+
     std::cout << "Writing image." << std::endl;
-    out.write(outputImage);
+    outView.write(outputImage);
 
     return 0;
 }
