@@ -562,8 +562,8 @@ int main (int argc, char *argv[])
     std::vector<std::string> argNames(1, "x");
     std::vector<double> args(1, 1.5);
     // std::string functionCode = "x";
-    // std::string functionCode = "( - (max (x -1 -1) (x -1 1) (x -1 2) (x 0 -1) (x 0 1) (x 0 2) (x 1 -1) (x 1 1) (x 1 2)) (min (x -1 -1) (x -1 1) (x -1 2) (x 0 -1) (x 0 1) (x 0 2) (x 1 -1) (x 1 1) (x 1 2)))";
-    std::string functionCode = "(* (< 0.8 x) x)";
+    std::string functionCode = "(* x ( < 0.1 ( - (max (x -1 -1) (x -1 1) (x -1 2) (x 0 -1) (x 0 1) (x 0 2) (x 1 -1) (x 1 1) (x 1 2)) (min (x -1 -1) (x -1 1) (x -1 2) (x 0 -1) (x 0 1) (x 0 2) (x 1 -1) (x 1 1) (x 1 2)))))";
+    // std::string functionCode = "(* (< 0.8 x) x)";
     // functionCode = "(x 0 0)";
     Cell functionCell = read(functionCode);
 
@@ -590,11 +590,10 @@ int main (int argc, char *argv[])
     cgFunction(imArgs, imView.width(), imView.height(), imView.stride(), outView.getData());
 
     /*
-    for(int i = imView.width(); ++i)
-        for(int j = imView.height(); ++j)
-            if(imView(i,j) < 0 || imView(i,j) > 1)
-                return 0;
-                */
+    for(int i = 0; i < imView.width(); ++i)
+        for(int j = 0; j < imView.height(); ++j)
+            std::cout << outView(i,j) << " ";
+            */
 
     std::cout << "Writing image." << std::endl;
     outView.write(outputImage);
