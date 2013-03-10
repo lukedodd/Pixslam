@@ -126,7 +126,7 @@ public:
 protected:
 	virtual EvalReturn symbolHandler(const std::string &symbol) = 0;
 	virtual EvalReturn functionHandler(const std::string &functionName, 
-	                                   const std::vector<EvalReturn> &args) = 0;
+									   const std::vector<EvalReturn> &args) = 0;
 	virtual EvalReturn numberHandler(const std::string &number) = 0;
 
 };
@@ -153,7 +153,7 @@ public:
 protected:
 
 	virtual double functionHandler(const std::string &functionName, 
-	                               const std::vector<double> &args){
+								   const std::vector<double> &args){
 		return functionHandlerMap.at(functionName)(args);
 	}
 
@@ -195,7 +195,7 @@ protected:
 class CodeGenCalculatorFunction : public Visitor<AsmJit::XmmVar>{
 private:
 	typedef std::function<AsmJit::XmmVar (const std::vector<AsmJit::XmmVar> &)> 
-	        BuiltInFunctionHandler;
+			BuiltInFunctionHandler;
 
 	typedef const double * const * Arguments;
 	std::map<std::string, BuiltInFunctionHandler> functionHandlerMap;
@@ -253,7 +253,7 @@ public:
 	FuncPtrType generate(const Cell &c){
 		using namespace AsmJit;
 		compiler.newFunc(AsmJit::kX86FuncConvDefault, 
-		                 AsmJit::FuncBuilder5<void, Arguments, size_t, size_t, size_t, double *>());
+						 AsmJit::FuncBuilder5<void, Arguments, size_t, size_t, size_t, double *>());
 
 
 		GpVar pargv = compiler.getGpArg(0);
@@ -315,11 +315,11 @@ public:
 protected:
 
 	virtual AsmJit::XmmVar functionHandler(const std::string &functionName, 
-	                                       const std::vector<AsmJit::XmmVar> &args){
-	    using namespace AsmJit;
+										   const std::vector<AsmJit::XmmVar> &args){
+		using namespace AsmJit;
 
 		// try builtin function lookup first
-	    auto it = functionHandlerMap.find(functionName);
+		auto it = functionHandlerMap.find(functionName);
 		if(it != functionHandlerMap.end()){
 			return it->second(args);
 		}
@@ -372,6 +372,7 @@ protected:
 private:
 	void SetXmmVar(AsmJit::X86Compiler &c, AsmJit::XmmVar &v, double d){
 		using namespace AsmJit;
+
 		// I thought this was better, but it didn't actually work...
         // GpVar tmp(c.newGpVar());
         // c.mov(tmp, d);
@@ -474,7 +475,7 @@ void repl(const std::string & prompt )
 		CodeGenCalculator cgcalc;
         std::cout << prompt;
         std::string line; std::getline(std::cin, line);
-       	Cell cell = read(line);
+		Cell cell = read(line);
         std::cout << calc.eval(read(line)) << '\n';
         // std::function<double (void)> f = cgcalc.generate(read(line));
         std::cout << "code gen " << f() << '\n';
@@ -512,13 +513,13 @@ int main (int argc, char *argv[])
 
 	int border = 10;
 	Image imView(im.getData() + border*im.width() + border, 
-	             im.width() - border*2, im.height() - border*2,
-	             im.width());
+				 im.width() - border*2, im.height() - border*2,
+				 im.width());
 
 	Image out(im.width(), im.height());
 	Image outView(out.getData() + border*out.width() + border, 
-	              out.width() - border*2, out.height() - border*2,
-	              out.width());
+				  out.width() - border*2, out.height() - border*2,
+				  out.width());
 
 	std::vector<const double*> imArgs;
 	imArgs.push_back(imView.getData());
