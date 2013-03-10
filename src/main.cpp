@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <cmath>
 #include <stdexcept>
+#include <numeric>
 
 #include <asmjit/asmjit.h>
 
@@ -223,22 +224,34 @@ public:
         using namespace AsmJit;
 
         functionHandlerMap["+"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
-            compiler.addsd(args[0], args[1]);
+            std::accumulate(args.begin()+1, args.end(), args[0], [&](XmmVar a, XmmVar b){
+                compiler.addsd(a, b);
+                return a;
+            });
             return args[0];
         };
 
         functionHandlerMap["-"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
-            compiler.subsd(args[0], args[1]);
+            std::accumulate(args.begin()+1, args.end(), args[0], [&](XmmVar a, XmmVar b){
+                compiler.subsd(a, b);
+                return a;
+            });
             return args[0];
         };
 
         functionHandlerMap["*"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
-            compiler.mulsd(args[0], args[1]);
+            std::accumulate(args.begin()+1, args.end(), args[0], [&](XmmVar a, XmmVar b){
+                compiler.mulsd(a, b);
+                return a;
+            });
             return args[0];
         };
 
         functionHandlerMap["/"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
-            compiler.divsd(args[0], args[1]);
+            std::accumulate(args.begin()+1, args.end(), args[0], [&](XmmVar a, XmmVar b){
+                compiler.divsd(a, b);
+                return a;
+            });
             return args[0];
         };
 
@@ -363,7 +376,6 @@ protected:
     // is equivanlent to x_i_j
     virtual AsmJit::XmmVar symbolHandler(const std::string &name){
         using namespace AsmJit;
-
         GpVar pImage = argv[argNameToIndex.at(name)];
         XmmVar v(compiler.newXmmVar());
         compiler.movsd(v, ptr(pImage, currentIndex, kScale8Times));
@@ -372,8 +384,8 @@ protected:
 
 private:
     void SetXmmVar(AsmJit::X86Compiler &c, AsmJit::XmmVar &v, double d){
+        // TODO: store constants in memory and load from there...
         using namespace AsmJit;
-        // I thought this was better, but it didn't actually work...
         GpVar gpreg(c.newGpVar());
         uint64_t *i = reinterpret_cast<uint64_t*>(&d);
         c.mov(gpreg, i[0]);
@@ -495,7 +507,7 @@ int main (int argc, char *argv[])
     // repl(">");
     std::vector<std::string> argNames(1, "x");
     std::vector<double> args(1, 1.5);
-    std::string functionCode = "(/ (+ (+ (x 0 -1) (x 0 1)) (x 0 2)) 1.5)";
+    std::string functionCode = "(/ (+ (x -1 -1) (x -1 1) (x -1 2) (x 0 -1) (x 0 1) (x 0 2) (x 1 -1) (x 1 1) (x 1 2)) 9)";
     // functionCode = "(x 0 0)";
     Cell functionCell = read(functionCode);
 
