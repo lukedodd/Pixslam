@@ -255,6 +255,23 @@ public:
             return args[0];
         };
 
+        functionHandlerMap["min"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
+            std::accumulate(args.begin()+1, args.end(), args[0], [&](XmmVar a, XmmVar b){
+                compiler.minsd(a, b);
+                return a;
+            });
+            return args[0];
+        };
+
+        functionHandlerMap["max"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
+            std::accumulate(args.begin()+1, args.end(), args[0], [&](XmmVar a, XmmVar b){
+                compiler.maxsd(a, b);
+                return a;
+            });
+            return args[0];
+        };
+
+
 
         for(size_t i = 0; i < names.size(); ++i)
             argNameToIndex[names[i]] = i;
@@ -507,7 +524,7 @@ int main (int argc, char *argv[])
     // repl(">");
     std::vector<std::string> argNames(1, "x");
     std::vector<double> args(1, 1.5);
-    std::string functionCode = "(/ (+ (x -1 -1) (x -1 1) (x -1 2) (x 0 -1) (x 0 1) (x 0 2) (x 1 -1) (x 1 1) (x 1 2)) 9)";
+    std::string functionCode = "(max (x -1 -1) (x -1 1) (x -1 2) (x 0 -1) (x 0 1) (x 0 2) (x 1 -1) (x 1 1) (x 1 2))";
     // functionCode = "(x 0 0)";
     Cell functionCell = read(functionCode);
 
