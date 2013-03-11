@@ -532,7 +532,7 @@ int main (int argc, char *argv[])
 
     if(argc < 3){
         std::cout << "Useage:\n\n";
-        std::cout << "    pislam <code> <input-image> <output>\n\n";
+        std::cout << "    pixslam <code> <input-image> <output>\n\n";
         std::cout << "Code can either be supplied directly, or as a file path to read in.\n";
         std::cout << "The output argument is optional, defaults to out.png.\n\n";
         std::cout << "e.g:\n";
