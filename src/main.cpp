@@ -83,8 +83,8 @@ public:
     }
 
     ~Image(){
-        if(ownsData)
-            delete [] data; 
+        // if(ownsData)
+            // delete [] data; 
     }
 
 };
@@ -605,7 +605,6 @@ int main (int argc, char *argv[])
         return 1;
     }
 
-    /*
     // See if first arg is a file and read code from it.
     std::string codeString;
     std::ifstream ifs(argv[1]);
@@ -629,8 +628,8 @@ int main (int argc, char *argv[])
 
     // Remaining arg, if preset is our output destination.
     std::string outputImagePath = "out.png";
-    if(size_t(argc) >= 1 + cgFunction.getNumArgs())
-        outputImagePath = argv[1+cgFunction.getNumArgs()];
+    if(size_t(argc) >= 3 + cgFunction.getNumArgs())
+        outputImagePath = argv[3 +cgFunction.getNumArgs()-1];
 
     // Look at a subimages so we can process edges safely.
     // TODO: padding instead.
@@ -648,8 +647,6 @@ int main (int argc, char *argv[])
             out.width() - border*2, out.height() - border*2,
             out.width());
 
-
-    
     // std::vector<const double*>  d; d.push_back(inputImageViews[0].getData());
     // cgFunction(d, inputImageViews[0].width(), inputImageViews[0].height(), inputImageViews[0].stride(), outView.getData());
 
@@ -660,8 +657,8 @@ int main (int argc, char *argv[])
     // Write output.
     outView.write(outputImagePath);
     return 0;
-    */
         
+    /*
     // See if first arg is a file and read code from it.
     std::string codeString;
     std::ifstream t(argv[1]);
@@ -696,15 +693,16 @@ int main (int argc, char *argv[])
             out.width());
 
     // Build arguments.
-    std::vector<const double*> imArgs;
-    imArgs.push_back(imView.getData());
+    std::vector<Image> imArgs;
+    imArgs.push_back(imView);
 
     // Process sub image.
-    cgFunction(imArgs, imView.width(), imView.height(), imView.stride(), outView.getData());
+    cgFunction(imArgs, outView);
     
     // Write output.
     outView.write(outputImage);
     return 0;
+    */
 }
 
 
