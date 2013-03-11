@@ -99,6 +99,22 @@ struct Cell{
 };
 
 
+// convert given Cell to a Lisp-readable string
+// originally from: 
+// http://howtowriteaprogram.blogspot.co.uk/2010/11/lisp-interpreter-in-90-lines-of-c.html
+std::string to_string(const Cell & exp)
+{
+    if (exp.type == Cell::List) {
+        std::string s("(");
+        for (Cell::iter e = exp.list.begin(); e != exp.list.end(); ++e)
+            s += to_string(*e) + ' ';
+        if (s[s.size() - 1] == ' ')
+            s.erase(s.size() - 1);
+        return s + ')';
+    }
+    return exp.val;
+}
+
 template <typename EvalReturn> class Visitor{
 public:
     Visitor(){
@@ -227,7 +243,208 @@ private:
     std::vector<AsmJit::GpVar> argv;
 
 public:
-    CodeGenCalculatorFunction(const std::vector<std::string> &names, const Cell &cell){
+    CodeGenCalculatorFunction(const Cell &cell){
+       
+        // Check cell is of form ((arg list) (expr))
+        if(!(cell.type == Cell::List && cell.list.size() == 2 &&
+             cell.list[0].type == Cell::List && cell.list[1].type == Cell::List))
+           throw std::runtime_error("Function cell must be of form ((arg1 arg2 ...) (code))");
+
+
+        const Cell &argsCell = cell.list[0];
+        const Cell &code = cell.list[1];
+
+        // Load arguments
+        std::vector<std::string> argNames;
+        for(Cell c : argsCell.list){
+            if(c.type == Cell::Symbol)
+                argNames.push_back(c.val);
+            else
+                throw std::runtime_error(
+                    "Function cell must be of form ((arg1 arg2 ...) (code))");
+        }
+        
+
+        for(size_t i = 0; i < argNames.size(); ++i)
+            argNameToIndex[argNames[i]] = i;
+
+
+        // Specify how to deal with function calls.
+        PopulateBuiltInFunctionHandlerMap();
+        // Generate the code!
+        generatedFunction = generate(code);
+    }
+
+
+    FuncPtrType generate(const Cell &c){
+        using namespace AsmJit;
+        compiler.newFunc(AsmJit::kX86FuncConvDefault, 
+                AsmJit::FuncBuilder5<void, Arguments, size_t, size_t, size_t, double *>());
+
+
+        GpVar pargv = compiler.getGpArg(0);
+        for(size_t i = 0; i < argNameToIndex.size(); ++i){
+            argv.push_back(compiler.newGpVar());
+            compiler.mov(argv.back(), ptr(pargv, i*sizeof(double)));
+        }
+
+        zero = compiler.newXmmVar();
+        one = compiler.newXmmVar();
+        SetXmmVar(compiler, zero, 0.0);
+        SetXmmVar(compiler, one, 1.0);
+
+        w = compiler.getGpArg(1);
+        h = compiler.getGpArg(2);
+        stride = compiler.getGpArg(3);
+        out = compiler.getGpArg(4);
+
+        // Perpare loop vars
+        n = compiler.newGpVar();
+        compiler.mov(n, w);
+        compiler.imul(n, h);
+        currentIndex = compiler.newGpVar();
+        compiler.mov(currentIndex, imm(0));
+
+        currentI = compiler.newGpVar();
+        currentJ = compiler.newGpVar();
+        compiler.mov(currentI, imm(0));
+        compiler.mov(currentJ, imm(0));
+
+        // for i = 0..h
+        // for j = 0..w
+        Label startLoop(compiler.newLabel());
+        compiler.bind(startLoop);
+        {
+            compiler.mov(currentIndex, currentI);
+            compiler.imul(currentIndex, stride);
+            compiler.add(currentIndex, currentJ);
+            // im(i,j) = f(x)
+            AsmJit::XmmVar retVar = eval(c);
+            compiler.movq(ptr(out, currentIndex, kScale8Times), retVar);
+
+        }
+        compiler.add(currentJ, imm(1));
+        compiler.cmp(currentJ, w);
+        compiler.jne(startLoop);
+        compiler.mov(currentJ, imm(0));
+        compiler.add(currentI, imm(1));
+        compiler.cmp(currentI, h);
+        compiler.jne(startLoop);
+
+
+        compiler.endFunc();
+        return reinterpret_cast<FuncPtrType>(compiler.make());
+
+    }
+
+
+    void operator()(const std::vector<Image> &images, Image &out) const {
+        if(images.empty())
+            throw std::runtime_error("Must have at least one input image.");
+
+        // Check all images have the same dimension + stride.
+        for(size_t i = 1; i < images.size(); ++i)
+            if(   images[i-1].width() != images[i].width()
+               || images[i-1].height() != images[i].height()
+               || images[i-1].stride() != images[i].stride())
+                throw std::runtime_error("All input images must have same dimensions.");
+
+        if(   images[0].width() != out.width()
+           || images[0].height() != out.height()
+           || images[0].stride() != out.stride())
+            throw std::runtime_error("All input images and output must have same dimensions.");
+
+
+        std::vector<const double*> dataPtrs;
+        for(const Image &im : images)
+            dataPtrs.push_back(im.getData());
+
+        generatedFunction(&dataPtrs[0], images[0].width(), images[0].height(), images[0].stride(),
+                          out.getData()); 
+    }
+
+    // "Lower level" call for image data from other sources (e.g. opencv)
+    void operator()(const std::vector<const double *> &args, 
+                    int w, int h, int stride,
+                    double *out) const {
+        generatedFunction(&args[0], w, h, stride, out); 
+    }
+
+
+
+    size_t getNumArgs() const {return argNameToIndex.size();}
+
+    virtual ~CodeGenCalculatorFunction(){}
+
+private:
+
+    virtual AsmJit::XmmVar functionHandler(const std::string &functionName, 
+            const std::vector<AsmJit::XmmVar> &args){
+        using namespace AsmJit;
+
+        // try builtin function lookup first
+        auto it = functionHandlerMap.find(functionName);
+        if(it != functionHandlerMap.end()){
+            return it->second(args);
+        }
+
+        // Otherwise they must have been doing an image lookup...
+        GpVar i = compiler.newGpVar();
+        GpVar j = compiler.newGpVar();
+        compiler.mov(i, currentI);
+        compiler.mov(j, currentJ);
+
+        GpVar iOffset = compiler.newGpVar();
+        GpVar jOffset = compiler.newGpVar();
+        
+        // Convert double to int for indexing
+        // TODO: figure out a better way.
+        compiler.cvtsd2si(iOffset, args[0]);
+        compiler.cvtsd2si(jOffset, args[1]);
+
+        compiler.add(i, iOffset);
+        compiler.add(j, jOffset);
+
+        GpVar index = compiler.newGpVar();
+        compiler.mov(index, i);
+        compiler.imul(index, stride);
+        compiler.add(index, j);
+
+        
+        GpVar pImage = argv[argNameToIndex.at(functionName)];
+        XmmVar v(compiler.newXmmVar());
+        compiler.movsd(v, ptr(pImage, index, kScale8Times));
+        return v;
+    }
+
+    virtual AsmJit::XmmVar numberHandler(const std::string &number){
+        double x = std::atof(number.c_str());
+        AsmJit::XmmVar xVar(compiler.newXmmVar());
+        SetXmmVar(compiler, xVar, x);
+        return xVar;
+    };
+
+    // Use of an argument as a symbol not a function call 
+    // is equivanlent to x_i_j
+    virtual AsmJit::XmmVar symbolHandler(const std::string &name){
+        using namespace AsmJit;
+        GpVar pImage = argv[argNameToIndex.at(name)];
+        XmmVar v(compiler.newXmmVar());
+        compiler.movsd(v, ptr(pImage, currentIndex, kScale8Times));
+        return v;
+    };
+
+    void SetXmmVar(AsmJit::X86Compiler &c, AsmJit::XmmVar &v, double d){
+        // TODO: store constants in memory and load from there...
+        using namespace AsmJit;
+        GpVar gpreg(c.newGpVar());
+        uint64_t *i = reinterpret_cast<uint64_t*>(&d);
+        c.mov(gpreg, i[0]);
+        c.movq(v, gpreg);
+        c.unuse(gpreg);
+    }
+
+    void PopulateBuiltInFunctionHandlerMap(){
         using namespace AsmJit;
 
         functionHandlerMap["+"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
@@ -301,150 +518,7 @@ public:
             compiler.andpd(args[1], one);
             return args[1];
         };
-        
-
-        for(size_t i = 0; i < names.size(); ++i)
-            argNameToIndex[names[i]] = i;
-
-
-        generatedFunction = generate(cell);
-    }
-
-
-    FuncPtrType generate(const Cell &c){
-        using namespace AsmJit;
-        compiler.newFunc(AsmJit::kX86FuncConvDefault, 
-                AsmJit::FuncBuilder5<void, Arguments, size_t, size_t, size_t, double *>());
-
-
-        GpVar pargv = compiler.getGpArg(0);
-        for(size_t i = 0; i < argNameToIndex.size(); ++i){
-            argv.push_back(compiler.newGpVar());
-            compiler.mov(argv.back(), ptr(pargv, i*sizeof(double)));
-        }
-
-        zero = compiler.newXmmVar();
-        one = compiler.newXmmVar();
-        SetXmmVar(compiler, zero, 0.0);
-        SetXmmVar(compiler, one, 1.0);
-
-        w = compiler.getGpArg(1);
-        h = compiler.getGpArg(2);
-        stride = compiler.getGpArg(3);
-        out = compiler.getGpArg(4);
-
-        // Perpare loop vars
-        n = compiler.newGpVar();
-        compiler.mov(n, w);
-        compiler.imul(n, h);
-        currentIndex = compiler.newGpVar();
-        compiler.mov(currentIndex, imm(0));
-
-        currentI = compiler.newGpVar();
-        currentJ = compiler.newGpVar();
-        compiler.mov(currentI, imm(0));
-        compiler.mov(currentJ, imm(0));
-
-        // for i = 0..h
-        // for j = 0..w
-        Label startLoop(compiler.newLabel());
-        compiler.bind(startLoop);
-        {
-            compiler.mov(currentIndex, currentI);
-            compiler.imul(currentIndex, stride);
-            compiler.add(currentIndex, currentJ);
-            // im(i,j) = f(x)
-            AsmJit::XmmVar retVar = eval(c);
-            compiler.movq(ptr(out, currentIndex, kScale8Times), retVar);
-
-        }
-        compiler.add(currentJ, imm(1));
-        compiler.cmp(currentJ, w);
-        compiler.jne(startLoop);
-        compiler.mov(currentJ, imm(0));
-        compiler.add(currentI, imm(1));
-        compiler.cmp(currentI, h);
-        compiler.jne(startLoop);
-
-
-        compiler.endFunc();
-        return reinterpret_cast<FuncPtrType>(compiler.make());
-
-    }
-
-    void operator()(const std::vector<const double *> &args, int w, int h, int stride, double *out) const {
-        generatedFunction(&args[0], w, h, stride, out); 
-    }
-
-    virtual ~CodeGenCalculatorFunction(){}
-
-protected:
-
-    virtual AsmJit::XmmVar functionHandler(const std::string &functionName, 
-            const std::vector<AsmJit::XmmVar> &args){
-        using namespace AsmJit;
-
-        // try builtin function lookup first
-        auto it = functionHandlerMap.find(functionName);
-        if(it != functionHandlerMap.end()){
-            return it->second(args);
-        }
-
-        // Otherwise they must have been doing an image lookup...
-        GpVar i = compiler.newGpVar();
-        GpVar j = compiler.newGpVar();
-        compiler.mov(i, currentI);
-        compiler.mov(j, currentJ);
-
-        GpVar iOffset = compiler.newGpVar();
-        GpVar jOffset = compiler.newGpVar();
-        
-        // Convert double to int for indexing
-        // TODO: figure out a better way.
-        compiler.cvtsd2si(iOffset, args[0]);
-        compiler.cvtsd2si(jOffset, args[1]);
-
-        compiler.add(i, iOffset);
-        compiler.add(j, jOffset);
-
-        GpVar index = compiler.newGpVar();
-        compiler.mov(index, i);
-        compiler.imul(index, stride);
-        compiler.add(index, j);
-
-        
-        GpVar pImage = argv[argNameToIndex.at(functionName)];
-        XmmVar v(compiler.newXmmVar());
-        compiler.movsd(v, ptr(pImage, index, kScale8Times));
-        return v;
-    }
-
-    virtual AsmJit::XmmVar numberHandler(const std::string &number){
-        double x = std::atof(number.c_str());
-        AsmJit::XmmVar xVar(compiler.newXmmVar());
-        SetXmmVar(compiler, xVar, x);
-        return xVar;
-    };
-
-    // Use of an argument as a symbol not a function call 
-    // is equivanlent to x_i_j
-    virtual AsmJit::XmmVar symbolHandler(const std::string &name){
-        using namespace AsmJit;
-        GpVar pImage = argv[argNameToIndex.at(name)];
-        XmmVar v(compiler.newXmmVar());
-        compiler.movsd(v, ptr(pImage, currentIndex, kScale8Times));
-        return v;
-    };
-
-private:
-    void SetXmmVar(AsmJit::X86Compiler &c, AsmJit::XmmVar &v, double d){
-        // TODO: store constants in memory and load from there...
-        using namespace AsmJit;
-        GpVar gpreg(c.newGpVar());
-        uint64_t *i = reinterpret_cast<uint64_t*>(&d);
-        c.mov(gpreg, i[0]);
-        c.movq(v, gpreg);
-        c.unuse(gpreg);
+ 
     }
 
 };
@@ -511,39 +585,83 @@ Cell read(const std::string & s)
     return read_from(tokens);
 }
 
-// convert given Cell to a Lisp-readable string
-// originally from: 
-// http://howtowriteaprogram.blogspot.co.uk/2010/11/lisp-interpreter-in-90-lines-of-c.html
-std::string to_string(const Cell & exp)
-{
-    if (exp.type == Cell::List) {
-        std::string s("(");
-        for (Cell::iter e = exp.list.begin(); e != exp.list.end(); ++e)
-            s += to_string(*e) + ' ';
-        if (s[s.size() - 1] == ' ')
-            s.erase(s.size() - 1);
-        return s + ')';
-    }
-    return exp.val;
-}
-
 int main (int argc, char *argv[])
 {
 
     if(argc < 3){
-        std::cout << "Useage:\n\n";
-        std::cout << "    pixslam <code> <input-image> <output>\n\n";
+        std::cout << "Usage:\n\n";
+        std::cout << "    pixslam <code> <input-images> <output>\n\n";
         std::cout << "Code can either be supplied directly, or as a file path to read in.\n";
+        std::cout << "The number of input images read is depndent on the supplied code.\n";
         std::cout << "The output argument is optional, defaults to out.png.\n\n";
         std::cout << "e.g:\n";
         std::cout << "Muliply image by 2 and output to out.png.\n\n";
-        std::cout << "    $ pixslam \"(* A 2)\" image.png\n\n";
+        std::cout << "    pixslam \"((A) (* A 2))\" image.png\n\n";
         std::cout << "If file mult_by_two.pixslam contains \"(* A 2)\" then the following \n";
         std::cout << "multiplies image.png by 2 and output to image_times_two.png.\n\n";
-        std::cout << "    $ pixslam mult_by_two.pixslam image.png image_times_two.png\n\n";
+        std::cout << "    pixslam mult_by_two.pixslam image.png image_times_two.png\n\n";
+        std::cout << "Blend two images together equally and output to blend.png.\n";
+        std::cout << "    pixslam ((A B) (* 0.5 (+ A B))) image1.png image2.png blend.png\n\n";
         return 1;
     }
 
+    /*
+    // See if first arg is a file and read code from it.
+    std::string codeString;
+    std::ifstream ifs(argv[1]);
+    if(ifs){
+        std::stringstream buffer;
+        buffer << ifs.rdbuf();
+        codeString = buffer.str();
+    }
+
+    if(codeString.empty()) // If that didn't work interpret first arg as code.
+        codeString = argv[1];
+
+    // Generate code.
+    Cell code = read(codeString);
+    CodeGenCalculatorFunction cgFunction(code);
+
+    // Read image from second arg
+    std::vector<Image> inputImages;
+    for(size_t i = 0; i < cgFunction.getNumArgs(); ++i)
+        inputImages.push_back(Image(argv[2+i]));
+
+    // Remaining arg, if preset is our output destination.
+    std::string outputImagePath = "out.png";
+    if(size_t(argc) >= 1 + cgFunction.getNumArgs())
+        outputImagePath = argv[1+cgFunction.getNumArgs()];
+
+    // Look at a subimages so we can process edges safely.
+    // TODO: padding instead.
+    int border = 5;
+    std::vector<Image> inputImageViews;
+    for(Image &im : inputImages)
+        inputImageViews.push_back(
+            Image(im.getData() + border*im.width() + border, 
+                  im.width() - border*2, im.height() - border*2,
+                  im.width()));
+
+    // Perpare output image.
+    Image out(inputImages[0].width(), inputImages[0].height());
+    Image outView(out.getData() + border*out.width() + border, 
+            out.width() - border*2, out.height() - border*2,
+            out.width());
+
+
+    
+    // std::vector<const double*>  d; d.push_back(inputImageViews[0].getData());
+    // cgFunction(d, inputImageViews[0].width(), inputImageViews[0].height(), inputImageViews[0].stride(), outView.getData());
+
+
+    // Process images!
+    cgFunction(inputImageViews, outView);
+    
+    // Write output.
+    outView.write(outputImagePath);
+    return 0;
+    */
+        
     // See if first arg is a file and read code from it.
     std::string codeString;
     std::ifstream t(argv[1]);
@@ -564,8 +682,7 @@ int main (int argc, char *argv[])
 
     // Generate code.
     Cell code = read(codeString);
-    std::vector<std::string> argNames; argNames.push_back("A");
-    CodeGenCalculatorFunction cgFunction(argNames, code);
+    CodeGenCalculatorFunction cgFunction(code);
 
     // Look at a subimage so we can process edges safely.
     int border = 5;
@@ -589,4 +706,5 @@ int main (int argc, char *argv[])
     outView.write(outputImage);
     return 0;
 }
+
 
