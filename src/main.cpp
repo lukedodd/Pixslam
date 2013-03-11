@@ -50,6 +50,14 @@ public:
     {
     }
 
+    // Forbid copy and assignment for now, allow move.
+    Image(const Image &) = delete;
+    Image &operator=(const Image&) = delete;
+
+    Image(Image&& other) : 
+        data(other.data), w(other.w), h(other.h), s(other.s), ownsData(other.ownsData){
+        other.data = 0;
+    }
 
     int width() const {return w;}
     int height() const {return h;}
@@ -83,8 +91,8 @@ public:
     }
 
     ~Image(){
-        // if(ownsData)
-            // delete [] data; 
+        if(ownsData && data)
+            delete [] data; 
     }
 
 };
@@ -624,7 +632,7 @@ int main (int argc, char *argv[])
     // Read image from second arg
     std::vector<Image> inputImages;
     for(size_t i = 0; i < cgFunction.getNumArgs(); ++i)
-        inputImages.push_back(Image(argv[2+i]));
+        inputImages.emplace_back(argv[2+i]);
 
     // Remaining arg, if preset is our output destination.
     std::string outputImagePath = "out.png";
@@ -636,10 +644,10 @@ int main (int argc, char *argv[])
     int border = 5;
     std::vector<Image> inputImageViews;
     for(Image &im : inputImages)
-        inputImageViews.push_back(
-            Image(im.getData() + border*im.width() + border, 
-                  im.width() - border*2, im.height() - border*2,
-                  im.width()));
+        inputImageViews.emplace_back(
+            im.getData() + border*im.width() + border, 
+            im.width() - border*2, im.height() - border*2,
+            im.width());
 
     // Perpare output image.
     Image out(inputImages[0].width(), inputImages[0].height());
@@ -657,52 +665,6 @@ int main (int argc, char *argv[])
     // Write output.
     outView.write(outputImagePath);
     return 0;
-        
-    /*
-    // See if first arg is a file and read code from it.
-    std::string codeString;
-    std::ifstream t(argv[1]);
-    std::stringstream buffer;
-    buffer << t.rdbuf();
-    codeString = buffer.str();
-
-    if(codeString.empty()) // If that didn't work interpret first arg as code.
-        codeString = argv[1];
-
-    // Read image from second arg
-    Image im(argv[2]);
-
-    // 4th arg, if preset is our output destination.
-    std::string outputImage = "out.png";
-    if(argc == 4)
-        outputImage = argv[3];
-
-    // Generate code.
-    Cell code = read(codeString);
-    CodeGenCalculatorFunction cgFunction(code);
-
-    // Look at a subimage so we can process edges safely.
-    int border = 5;
-    Image imView(im.getData() + border*im.width() + border, 
-            im.width() - border*2, im.height() - border*2,
-            im.width());
-
-    Image out(im.width(), im.height());
-    Image outView(out.getData() + border*out.width() + border, 
-            out.width() - border*2, out.height() - border*2,
-            out.width());
-
-    // Build arguments.
-    std::vector<Image> imArgs;
-    imArgs.push_back(imView);
-
-    // Process sub image.
-    cgFunction(imArgs, outView);
-    
-    // Write output.
-    outView.write(outputImage);
-    return 0;
-    */
 }
 
 
