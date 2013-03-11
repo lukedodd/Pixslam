@@ -457,7 +457,7 @@ std::list<std::string> tokenize(const std::string & str){
     std::list<std::string> tokens;
     const char * s = str.c_str();
     while (*s) {
-        while (*s == ' ')
+        while (*s == ' ' || *s == '\t' || *s == '\n')
             ++s;
         if (*s == '(' || *s == ')')
             tokens.push_back(*s++ == '(' ? "(" : ")");
