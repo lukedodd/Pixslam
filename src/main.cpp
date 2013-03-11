@@ -9,6 +9,8 @@
 #include <cmath>
 #include <stdexcept>
 #include <numeric>
+#include <sstream>
+#include <fstream>
 
 #include <asmjit/asmjit.h>
 
@@ -299,9 +301,7 @@ public:
             compiler.andpd(args[1], one);
             return args[1];
         };
-
-
-
+        
 
         for(size_t i = 0; i < names.size(); ++i)
             argNameToIndex[names[i]] = i;
@@ -527,53 +527,47 @@ std::string to_string(const Cell & exp)
     return exp.val;
 }
 
-// read-eval-print-loop
-/*
-void repl(const std::string & prompt )
-{
-       Calculator calc;
-       for (;;) {
-       CodeGenCalculator cgcalc;
-       std::cout << prompt;
-       std::string line; std::getline(std::cin, line);
-       Cell cell = read(line);
-       std::cout << calc.eval(read(line)) << '\n';
-    // std::function<double (void)> f = cgcalc.generate(read(line));
-    std::cout << "code gen " << f() << '\n';
-    }
-}
-*/
-
 int main (int argc, char *argv[])
 {
-    std::string outputImage = "out.png";
 
-    if(argc < 2){
-        std::cout << "Please supply an input image! \n";
+    if(argc < 3){
+        std::cout << "Useage:\n\n";
+        std::cout << "    pislam <code> <input-image> <output>\n\n";
+        std::cout << "Code can either be supplied directly, or as a file path to read in.\n";
+        std::cout << "The output argument is optional, defaults to out.png.\n\n";
+        std::cout << "e.g:\n";
+        std::cout << "Muliply image by 2 and output to out.png.\n\n";
+        std::cout << "    $ pixslam \"(* A 2)\" image.png\n\n";
+        std::cout << "If file mult_by_two.pixslam contains \"(* A 2)\" then the following \n";
+        std::cout << "multiplies image.png by 2 and output to image_times_two.png.\n\n";
+        std::cout << "    $ pixslam mult_by_two.pixslam image.png image_times_two.png\n\n";
         return 1;
     }
 
-    if(argc >= 3)
-        outputImage = argv[2];
+    // See if first arg is a file and read code from it.
+    std::string codeString;
+    std::ifstream t(argv[1]);
+    std::stringstream buffer;
+    buffer << t.rdbuf();
+    codeString = buffer.str();
 
-    Image im(argv[1]);
+    if(codeString.empty()) // If that didn't work interpret first arg as code.
+        codeString = argv[1];
 
-    // repl(">");
-    std::vector<std::string> argNames(1, "x");
-    std::vector<double> args(1, 1.5);
-    // std::string functionCode = "x";
-    std::string functionCode = "(* x ( < 0.1 ( - (max (x -1 -1) (x -1 1) (x -1 2) (x 0 -1) (x 0 1) (x 0 2) (x 1 -1) (x 1 1) (x 1 2)) (min (x -1 -1) (x -1 1) (x -1 2) (x 0 -1) (x 0 1) (x 0 2) (x 1 -1) (x 1 1) (x 1 2)))))";
-    // std::string functionCode = "(* (< 0.8 x) x)";
-    // functionCode = "(x 0 0)";
-    Cell functionCell = read(functionCode);
+    // Read image from second arg
+    Image im(argv[2]);
 
-    // CalculatorFunction function(argNames, functionCell);
-    CodeGenCalculatorFunction cgFunction(argNames, functionCell);
+    // 4th arg, if preset is our output destination.
+    std::string outputImage = "out.png";
+    if(argc == 4)
+        outputImage = argv[3];
 
-    // std::cout << "Interpreted output: " << function(args) << std::endl;
-    // std::cout << "Code gen output: " << cgFunction(args) << std::endl;
+    // Generate code.
+    Cell code = read(codeString);
+    std::vector<std::string> argNames; argNames.push_back("A");
+    CodeGenCalculatorFunction cgFunction(argNames, code);
 
-
+    // Look at a subimage so we can process edges safely.
     int border = 5;
     Image imView(im.getData() + border*im.width() + border, 
             im.width() - border*2, im.height() - border*2,
@@ -584,20 +578,15 @@ int main (int argc, char *argv[])
             out.width() - border*2, out.height() - border*2,
             out.width());
 
+    // Build arguments.
     std::vector<const double*> imArgs;
     imArgs.push_back(imView.getData());
-    std::cout << "Calling function." << std::endl;
+
+    // Process sub image.
     cgFunction(imArgs, imView.width(), imView.height(), imView.stride(), outView.getData());
-
-    /*
-    for(int i = 0; i < imView.width(); ++i)
-        for(int j = 0; j < imView.height(); ++j)
-            std::cout << outView(i,j) << " ";
-            */
-
-    std::cout << "Writing image." << std::endl;
+    
+    // Write output.
     outView.write(outputImage);
-
     return 0;
 }
 
