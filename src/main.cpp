@@ -505,84 +505,103 @@ private:
     void PopulateBuiltInFunctionHandlerMap(){
         using namespace AsmJit;
 
-/*
-        auto foldl1 = [&](const std::vector<XmmVar> &args) -> XmmVar{
-            compiler.newXmmVar 
-        };
-        */
 
         functionHandlerMap["+"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
-            std::accumulate(args.begin()+1, args.end(), args[0], [&](XmmVar a, XmmVar b){
-                compiler.addsd(a, b);
-                return a;
+            XmmVar ret = compiler.newXmmVar();
+            compiler.movq(ret, args[0]);
+            std::for_each(args.begin()+1, args.end(),  [&](const XmmVar &a){
+                compiler.addsd(ret, a);
             });
-            return args[0];
+            return ret;
         };
+
 
         functionHandlerMap["-"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
             XmmVar ret = compiler.newXmmVar();
             compiler.movq(ret, args[0]);
             std::for_each(args.begin()+1, args.end(),  [&](const XmmVar &a){
                 compiler.subsd(ret, a);
-                return a;
             });
             return ret;
         };
 
+
         functionHandlerMap["*"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
-            std::accumulate(args.begin()+1, args.end(), args[0], [&](XmmVar a, XmmVar b){
-                compiler.mulsd(a, b);
-                return a;
+            XmmVar ret = compiler.newXmmVar();
+            compiler.movq(ret, args[0]);
+            std::for_each(args.begin()+1, args.end(),  [&](const XmmVar &a){
+                compiler.mulsd(ret, a);
             });
-            return args[0];
+            return ret;
         };
+
 
         functionHandlerMap["/"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
-            std::accumulate(args.begin()+1, args.end(), args[0], [&](XmmVar a, XmmVar b){
-                compiler.divsd(a, b);
-                return a;
+            XmmVar ret = compiler.newXmmVar();
+            compiler.movq(ret, args[0]);
+            std::for_each(args.begin()+1, args.end(),  [&](const XmmVar &a){
+                compiler.divsd(ret, a);
             });
-            return args[0];
+            return ret;
         };
+
 
         functionHandlerMap["min"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
-            std::accumulate(args.begin()+1, args.end(), args[0], [&](XmmVar a, XmmVar b){
-                compiler.minsd(a, b);
-                return a;
+            XmmVar ret = compiler.newXmmVar();
+            compiler.movq(ret, args[0]);
+            std::for_each(args.begin()+1, args.end(),  [&](const XmmVar &a){
+                compiler.minsd(ret, a);
             });
-            return args[0];
+            return ret;
         };
+
+
 
         functionHandlerMap["max"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
-            std::accumulate(args.begin()+1, args.end(), args[0], [&](XmmVar a, XmmVar b){
-                compiler.maxsd(a, b);
-                return a;
+            XmmVar ret = compiler.newXmmVar();
+            compiler.movq(ret, args[0]);
+            std::for_each(args.begin()+1, args.end(),  [&](const XmmVar &a){
+                compiler.maxsd(ret, a);
             });
-            return args[0];
+            return ret;
         };
 
+
+
         functionHandlerMap["<"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
-            compiler.cmpsd(args[0], args[1], 1);
-            compiler.andpd(args[0], one);
-            return args[0];
+            XmmVar ret = compiler.newXmmVar();
+            compiler.movq(ret, args[0]);
+
+            compiler.cmpsd(ret, args[1], 1);
+            compiler.andpd(ret, one);
+            return ret;
         };
 
         functionHandlerMap[">"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
-            compiler.cmpsd(args[1], args[0], 1);
-            compiler.andpd(args[1], one);
-            return args[1];
+            XmmVar ret = compiler.newXmmVar();
+            compiler.movq(ret, args[1]);
+
+            compiler.cmpsd(ret, args[0], 1);
+            compiler.andpd(ret, one);
+            return ret;
         };
 
         functionHandlerMap["<="] = [&](const std::vector<XmmVar> &args) -> XmmVar{
-            compiler.cmpsd(args[0], args[1], 2);
-            compiler.andpd(args[0], one);
-            return args[0];
+            XmmVar ret = compiler.newXmmVar();
+            compiler.movq(ret, args[0]);
+
+            compiler.cmpsd(ret, args[1], 2);
+            compiler.andpd(ret, one);
+            return ret;
         };
 
         functionHandlerMap[">="] = [&](const std::vector<XmmVar> &args) -> XmmVar{
-            compiler.cmpsd(args[1], args[0], 2);
-            compiler.andpd(args[1], one);
-            return args[1];
+            XmmVar ret = compiler.newXmmVar();
+            compiler.movq(ret, args[1]);
+
+            compiler.cmpsd(ret, args[0], 2);
+            compiler.andpd(ret, one);
+            return ret;
         };
  
     }
