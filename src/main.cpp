@@ -246,12 +246,21 @@ private:
     AsmJit::GpVar n;
     AsmJit::GpVar out;
 
+    AsmJit::XmmVar wd;
+    AsmJit::XmmVar hd;
+
     AsmJit::XmmVar zero;
     AsmJit::XmmVar one;
     std::vector<AsmJit::GpVar> argv;
 
+    std::map<std::string, AsmJit::XmmVar> symbols;
+
+    AsmJit::FileLogger logger;
+
 public:
-    CodeGenCalculatorFunction(const Cell &cell){
+    CodeGenCalculatorFunction(const Cell &cell) : logger(stdout) {
+
+        compiler.setLogger(&logger);
        
         // Check cell is of form ((arg list) (expr))
         if(!(cell.type == Cell::List && cell.list.size() == 2 &&
@@ -305,6 +314,16 @@ public:
         h = compiler.getGpArg(2);
         stride = compiler.getGpArg(3);
         out = compiler.getGpArg(4);
+
+        wd = compiler.newXmmVar();
+        hd = compiler.newXmmVar();
+        compiler.cvtsi2sd(wd, w);
+        compiler.cvtsi2sd(hd, h);
+        // SetXmmVar(compiler, wd, 512);
+        // SetXmmVar(compiler, hd, 512);
+        symbols["w"] = wd;
+        symbols["h"] = hd;
+
 
         // Perpare loop vars
         n = compiler.newGpVar();
@@ -382,7 +401,9 @@ public:
 
     size_t getNumArgs() const {return argNameToIndex.size();}
 
-    virtual ~CodeGenCalculatorFunction(){}
+    virtual ~CodeGenCalculatorFunction(){
+        AsmJit::MemoryManager::getGlobal()->free((void*)generatedFunction); 
+    }
 
 private:
 
@@ -396,6 +417,7 @@ private:
             return it->second(args);
         }
 
+        /*
         // Otherwise they must have been doing an image lookup...
         GpVar i = compiler.newGpVar();
         GpVar j = compiler.newGpVar();
@@ -423,6 +445,23 @@ private:
         XmmVar v(compiler.newXmmVar());
         compiler.movsd(v, ptr(pImage, index, kScale8Times));
         return v;
+        */
+        
+        // Absolute indexing
+        GpVar i = compiler.newGpVar();
+        GpVar j = compiler.newGpVar();
+        compiler.cvtsd2si(i, args[0]);
+        compiler.cvtsd2si(j, args[1]);
+
+        GpVar index = compiler.newGpVar();
+        compiler.mov(index, i);
+        compiler.imul(index, stride);
+        compiler.add(index, j);
+
+        GpVar pImage = argv[argNameToIndex.at(functionName)];
+        XmmVar v(compiler.newXmmVar());
+        compiler.movsd(v, ptr(pImage, index, kScale8Times));
+        return v;
     }
 
     virtual AsmJit::XmmVar numberHandler(const std::string &number){
@@ -436,10 +475,29 @@ private:
     // is equivanlent to x_i_j
     virtual AsmJit::XmmVar symbolHandler(const std::string &name){
         using namespace AsmJit;
-        GpVar pImage = argv[argNameToIndex.at(name)];
-        XmmVar v(compiler.newXmmVar());
-        compiler.movsd(v, ptr(pImage, currentIndex, kScale8Times));
-        return v;
+        if(argNameToIndex.find(name) != argNameToIndex.end()){
+            GpVar pImage = argv[argNameToIndex.at(name)];
+            XmmVar v(compiler.newXmmVar());
+            compiler.movsd(v, ptr(pImage, currentIndex, kScale8Times));
+            return v;
+        }else if(name == "i" || name == "j"){
+            XmmVar v(compiler.newXmmVar());
+            AsmJit::GpVar index = name == "i" ? currentI : currentJ;
+            compiler.cvtsi2sd(v, index);
+            return v;
+        }else if(symbols.find(name) != symbols.end()){
+            return symbols[name];
+
+            /*
+                // works, but why not symbols[name]?
+                hd = compiler.newXmmVar();
+                compiler.cvtsi2sd(hd, h);
+                return hd;
+                */
+                // return hd;
+        }
+        
+        throw std::runtime_error("Unable to find symbol: " + name);
     };
 
     void SetXmmVar(AsmJit::X86Compiler &c, AsmJit::XmmVar &v, double d){
