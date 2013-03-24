@@ -487,14 +487,6 @@ private:
             return v;
         }else if(symbols.find(name) != symbols.end()){
             return symbols[name];
-
-            /*
-                // works, but why not symbols[name]?
-                hd = compiler.newXmmVar();
-                compiler.cvtsi2sd(hd, h);
-                return hd;
-                */
-                // return hd;
         }
         
         throw std::runtime_error("Unable to find symbol: " + name);
@@ -513,6 +505,12 @@ private:
     void PopulateBuiltInFunctionHandlerMap(){
         using namespace AsmJit;
 
+/*
+        auto foldl1 = [&](const std::vector<XmmVar> &args) -> XmmVar{
+            compiler.newXmmVar 
+        };
+        */
+
         functionHandlerMap["+"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
             std::accumulate(args.begin()+1, args.end(), args[0], [&](XmmVar a, XmmVar b){
                 compiler.addsd(a, b);
@@ -522,11 +520,13 @@ private:
         };
 
         functionHandlerMap["-"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
-            std::accumulate(args.begin()+1, args.end(), args[0], [&](XmmVar a, XmmVar b){
-                compiler.subsd(a, b);
+            XmmVar ret = compiler.newXmmVar();
+            compiler.movq(ret, args[0]);
+            std::for_each(args.begin()+1, args.end(),  [&](const XmmVar &a){
+                compiler.subsd(ret, a);
                 return a;
             });
-            return args[0];
+            return ret;
         };
 
         functionHandlerMap["*"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
