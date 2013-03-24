@@ -481,16 +481,16 @@ private:
         return xVar;
     };
 
-    // Use of an argument as a symbol not a function call 
-    // is equivanlent to x_i_j
     virtual AsmJit::XmmVar symbolHandler(const std::string &name){
         using namespace AsmJit;
+        // Use of an argument as a symbol not a function call 
+        // is equivanlent to x_i_j
         if(argNameToIndex.find(name) != argNameToIndex.end()){
             GpVar pImage = argv[argNameToIndex.at(name)];
             XmmVar v(compiler.newXmmVar());
             compiler.movsd(v, ptr(pImage, currentIndex, kScale8Times));
             return v;
-        }else if(name == "i" || name == "j"){
+        }else if(name == "i" || name == "j"){ // special symbols
             XmmVar v(compiler.newXmmVar());
             AsmJit::GpVar index = name == "i" ? currentI : currentJ;
             compiler.cvtsi2sd(v, index);
