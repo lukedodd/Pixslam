@@ -319,8 +319,6 @@ public:
         hd = compiler.newXmmVar();
         compiler.cvtsi2sd(wd, w);
         compiler.cvtsi2sd(hd, h);
-        // SetXmmVar(compiler, wd, 512);
-        // SetXmmVar(compiler, hd, 512);
         symbols["w"] = wd;
         symbols["h"] = hd;
 
@@ -417,51 +415,63 @@ private:
             return it->second(args);
         }
 
-        /*
-        // Otherwise they must have been doing an image lookup...
-        GpVar i = compiler.newGpVar();
-        GpVar j = compiler.newGpVar();
-        compiler.mov(i, currentI);
-        compiler.mov(j, currentJ);
 
-        GpVar iOffset = compiler.newGpVar();
-        GpVar jOffset = compiler.newGpVar();
-        
-        // Convert double to int for indexing
-        // TODO: figure out a better way.
-        compiler.cvtsd2si(iOffset, args[0]);
-        compiler.cvtsd2si(jOffset, args[1]);
+        if(functionName[0] == '@'){
+            std::string imageName = std::string(functionName.begin()+1, functionName.end());
 
-        compiler.add(i, iOffset);
-        compiler.add(j, jOffset);
+            if(argNameToIndex.find(imageName) == argNameToIndex.end())
+                std::runtime_error("Absolute indexing with unknown image " + imageName);
 
-        GpVar index = compiler.newGpVar();
-        compiler.mov(index, i);
-        compiler.imul(index, stride);
-        compiler.add(index, j);
+            // Absolute indexing
+            GpVar i = compiler.newGpVar();
+            GpVar j = compiler.newGpVar();
+            compiler.cvtsd2si(i, args[0]);
+            compiler.cvtsd2si(j, args[1]);
 
-        
-        GpVar pImage = argv[argNameToIndex.at(functionName)];
-        XmmVar v(compiler.newXmmVar());
-        compiler.movsd(v, ptr(pImage, index, kScale8Times));
-        return v;
-        */
-        
-        // Absolute indexing
-        GpVar i = compiler.newGpVar();
-        GpVar j = compiler.newGpVar();
-        compiler.cvtsd2si(i, args[0]);
-        compiler.cvtsd2si(j, args[1]);
+            GpVar index = compiler.newGpVar();
+            compiler.mov(index, i);
+            compiler.imul(index, stride);
+            compiler.add(index, j);
 
-        GpVar index = compiler.newGpVar();
-        compiler.mov(index, i);
-        compiler.imul(index, stride);
-        compiler.add(index, j);
+            GpVar pImage = argv[argNameToIndex.at(imageName)];
+            XmmVar v(compiler.newXmmVar());
+            compiler.movsd(v, ptr(pImage, index, kScale8Times));
+            return v;
+        }else{
+            std::string imageName = functionName;
 
-        GpVar pImage = argv[argNameToIndex.at(functionName)];
-        XmmVar v(compiler.newXmmVar());
-        compiler.movsd(v, ptr(pImage, index, kScale8Times));
-        return v;
+            if(argNameToIndex.find(imageName) == argNameToIndex.end())
+                std::runtime_error("Unknown function (or image) " + imageName);
+
+            // Otherwise they must have been doing an image lookup...
+            GpVar i = compiler.newGpVar();
+            GpVar j = compiler.newGpVar();
+            compiler.mov(i, currentI);
+            compiler.mov(j, currentJ);
+
+            GpVar iOffset = compiler.newGpVar();
+            GpVar jOffset = compiler.newGpVar();
+            
+            // Convert double to int for indexing
+            // TODO: figure out a better way.
+            compiler.cvtsd2si(iOffset, args[0]);
+            compiler.cvtsd2si(jOffset, args[1]);
+
+            compiler.add(i, iOffset);
+            compiler.add(j, jOffset);
+
+            GpVar index = compiler.newGpVar();
+            compiler.mov(index, i);
+            compiler.imul(index, stride);
+            compiler.add(index, j);
+
+            
+            GpVar pImage = argv[argNameToIndex.at(imageName)];
+            XmmVar v(compiler.newXmmVar());
+            compiler.movsd(v, ptr(pImage, index, kScale8Times));
+            return v;
+        }
+               
     }
 
     virtual AsmJit::XmmVar numberHandler(const std::string &number){
@@ -506,6 +516,8 @@ private:
         using namespace AsmJit;
 
 
+        // TODO: This could be cleaner, the pattern is the same up to max,
+        // but we're not sharing any code.
         functionHandlerMap["+"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
             XmmVar ret = compiler.newXmmVar();
             compiler.movq(ret, args[0]);
@@ -565,7 +577,6 @@ private:
             });
             return ret;
         };
-
 
 
         functionHandlerMap["<"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
