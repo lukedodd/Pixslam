@@ -45,9 +45,27 @@ public:
         std::fill(data, data+(w*h), 0.0);
     }
 
+    Image(int w_, int h_, int s_) : w(w_), h(h_), s(s_), ownsData(true){
+        data = new PixType[h*s];
+        std::fill(data, data+(h*s), 0.0);
+    }
+
+
+
     Image(PixType *data, int w, int h, int s)
         : data(data), w(w), h(h), s(s), ownsData(false)
     {
+    }
+
+    Image(const Image &original, int padx, int pady)
+        : w(original.width() + padx*2), h(original.height() + pady*2), s(w), ownsData(true){
+        data = new PixType[w*h];
+        std::fill(data, data+(w*h), 0.0);
+        for(int i = 0; i < original.height(); ++i){
+            for(int j = 0; j < original.width(); ++j){
+                (*this)(i+pady, j+padx) = original(i,j);
+            }
+        }
     }
 
     // Forbid copy and assignment for now, allow move.
@@ -718,9 +736,12 @@ int main (int argc, char *argv[])
     CodeGenCalculatorFunction cgFunction(code);
 
     // Read image from second arg
+    int padding = 5;
     std::vector<Image> inputImages;
-    for(size_t i = 0; i < cgFunction.getNumArgs(); ++i)
-        inputImages.emplace_back(argv[2+i]);
+    for(size_t i = 0; i < cgFunction.getNumArgs(); ++i){
+        Image im(argv[2+i]);
+        inputImages.emplace_back(im, padding, padding);
+    }
 
     // Remaining arg, if preset is our output destination.
     std::string outputImagePath = "out.png";
@@ -728,30 +749,25 @@ int main (int argc, char *argv[])
         outputImagePath = argv[3 +cgFunction.getNumArgs()-1];
 
     // Look at a subimages so we can process edges safely.
-    // TODO: padding instead.
-    int border = 5;
     std::vector<Image> inputImageViews;
     for(Image &im : inputImages)
         inputImageViews.emplace_back(
-            im.getData() + border*im.width() + border, 
-            im.width() - border*2, im.height() - border*2,
+            im.getData() + padding*im.width() + padding, 
+            im.width() - padding*2, im.height() - padding*2,
             im.width());
 
     // Perpare output image.
-    Image out(inputImages[0].width(), inputImages[0].height());
-    Image outView(out.getData() + border*out.width() + border, 
-            out.width() - border*2, out.height() - border*2,
-            out.width());
+    Image outIm(inputImageViews[0].width(), inputImageViews[0].height(), inputImageViews[0].stride());
 
     // std::vector<const double*>  d; d.push_back(inputImageViews[0].getData());
     // cgFunction(d, inputImageViews[0].width(), inputImageViews[0].height(), inputImageViews[0].stride(), outView.getData());
 
 
     // Process images!
-    cgFunction(inputImageViews, outView);
+    cgFunction(inputImageViews, outIm);
     
     // Write output.
-    outView.write(outputImagePath);
+    outIm.write(outputImagePath);
     return 0;
 }
 
