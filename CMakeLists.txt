@@ -12,3 +12,6 @@ include_directories(${PIXSLAM_SOURCE_DIR}/src ${PIXSLAM_SOURCE_DIR}/libs/asmjit/
 add_executable(pixslam src/main.cpp)
 
 target_link_libraries(pixslam asmjit stb_image)
+
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/examples DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/example_data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
