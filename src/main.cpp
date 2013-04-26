@@ -178,68 +178,6 @@ protected:
 
 };
 
-class Calculator : public Visitor<double>{
-private:
-    typedef std::function<double (const std::vector<double> &)> BuiltInFunctionHandler;
-    std::map<std::string, BuiltInFunctionHandler> functionHandlerMap;
-public:
-    Calculator(){
-        // standard functions
-        functionHandlerMap["+"] = [](const std::vector<double> &d){return d[0] + d[1];};
-        functionHandlerMap["-"] = [](const std::vector<double> &d){return d[0] - d[1];};
-        functionHandlerMap["/"] = [](const std::vector<double> &d){return d[0] / d[1];};
-        functionHandlerMap["*"] = [](const std::vector<double> &d){return d[0] * d[1];};
-        functionHandlerMap["sin"] = [](const std::vector<double> &d){return std::sin(d[0]);};
-        functionHandlerMap["cos"] = [](const std::vector<double> &d){return std::cos(d[0]);};
-        functionHandlerMap["tan"] = [](const std::vector<double> &d){return std::tan(d[0]);};
-        functionHandlerMap["pow"] = [](const std::vector<double> &d){return std::pow(d[0], d[1]);};
-
-    }
-
-    virtual ~Calculator(){}
-
-protected:
-
-    virtual double functionHandler(const std::string &functionName, 
-            const std::vector<double> &args){
-        return functionHandlerMap.at(functionName)(args);
-    }
-
-    virtual double numberHandler(const std::string &number){
-        return std::atof(number.c_str());
-    }
-
-    virtual double symbolHandler(const std::string &symbol){
-        throw std::runtime_error("Cannot handle symbol.");
-    }
-
-};
-
-class CalculatorFunction : public Calculator{
-private:
-    std::map<std::string, size_t> argNameToIndex;
-    std::vector<double> inputArgs;
-    Cell cell;
-public:
-    CalculatorFunction(const std::vector<std::string> &names, const Cell &c) : cell(c){
-        for(size_t i = 0; i < names.size(); ++i)
-            argNameToIndex[names[i]] = i;
-    }
-
-    double operator()(const std::vector<double> &args){
-        inputArgs = args;
-        return eval(cell);
-    }
-
-    virtual ~CalculatorFunction(){}
-
-protected:
-    virtual double symbolHandler(const std::string &symbol){
-        return inputArgs[this->argNameToIndex[symbol]]; 
-    }
-};
-
-
 class CodeGenCalculatorFunction : public Visitor<AsmJit::XmmVar>{
 private:
     typedef std::function<AsmJit::XmmVar (const std::vector<AsmJit::XmmVar> &)> 
@@ -310,7 +248,47 @@ public:
         generatedFunction = generate(code);
     }
 
+    void operator()(const std::vector<Image> &images, Image &out) const {
+        if(images.empty())
+            throw std::runtime_error("must have at least one input image.");
 
+        // check all images have the same dimension + stride.
+        for(size_t i = 1; i < images.size(); ++i)
+            if(   images[i-1].width() != images[i].width()
+               || images[i-1].height() != images[i].height()
+               || images[i-1].stride() != images[i].stride())
+                throw std::runtime_error("all input images must have same dimensions.");
+
+        if(   images[0].width() != out.width()
+           || images[0].height() != out.height()
+           || images[0].stride() != out.stride())
+            throw std::runtime_error("all input images and output must have same dimensions.");
+
+
+        std::vector<const double*> dataPtrs;
+        for(const Image &im : images)
+            dataPtrs.push_back(im.getData());
+
+        generatedFunction(&dataPtrs[0], images[0].width(), images[0].height(), images[0].stride(),
+                          out.getData()); 
+    }
+
+    // "Lower level" call for image data from other sources (e.g. opencv)
+    void operator()(const std::vector<const double *> &args, 
+                    int w, int h, int stride,
+                    double *out) const {
+        generatedFunction(&args[0], w, h, stride, out); 
+    }
+
+
+    virtual size_t getNumArgs() const {return argNameToIndex.size();}
+
+    virtual ~CodeGenCalculatorFunction(){
+        AsmJit::MemoryManager::getGlobal()->free((void*)generatedFunction); 
+    }
+
+
+private:
     FuncPtrType generate(const Cell &c){
         using namespace AsmJit;
         compiler.newFunc(AsmJit::kX86FuncConvDefault, 
@@ -377,48 +355,6 @@ public:
 
         compiler.endFunc();
         return reinterpret_cast<FuncPtrType>(compiler.make());
-
-    }
-
-
-    void operator()(const std::vector<Image> &images, Image &out) const {
-        if(images.empty())
-            throw std::runtime_error("Must have at least one input image.");
-
-        // Check all images have the same dimension + stride.
-        for(size_t i = 1; i < images.size(); ++i)
-            if(   images[i-1].width() != images[i].width()
-               || images[i-1].height() != images[i].height()
-               || images[i-1].stride() != images[i].stride())
-                throw std::runtime_error("All input images must have same dimensions.");
-
-        if(   images[0].width() != out.width()
-           || images[0].height() != out.height()
-           || images[0].stride() != out.stride())
-            throw std::runtime_error("All input images and output must have same dimensions.");
-
-
-        std::vector<const double*> dataPtrs;
-        for(const Image &im : images)
-            dataPtrs.push_back(im.getData());
-
-        generatedFunction(&dataPtrs[0], images[0].width(), images[0].height(), images[0].stride(),
-                          out.getData()); 
-    }
-
-    // "Lower level" call for image data from other sources (e.g. opencv)
-    void operator()(const std::vector<const double *> &args, 
-                    int w, int h, int stride,
-                    double *out) const {
-        generatedFunction(&args[0], w, h, stride, out); 
-    }
-
-
-
-    size_t getNumArgs() const {return argNameToIndex.size();}
-
-    virtual ~CodeGenCalculatorFunction(){
-        AsmJit::MemoryManager::getGlobal()->free((void*)generatedFunction); 
     }
 
 private:
