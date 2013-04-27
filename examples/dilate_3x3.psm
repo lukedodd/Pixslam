@@ -1,0 +1,16 @@
+; Dialate an image with a 3x3 kernel.
+; That is: each pixel takes the value of the maximum pixel in a 3x3 neighbourhood.
+((A)
+    (
+        max 
+        (A -1 -1)
+        (A -1 0)
+        (A -1 1)
+        (A 0 -1)
+        (A 0 0)
+        (A 0 1)
+        (A 1 -1)
+        (A 1 0)
+        (A 1 1)
+    )
+)

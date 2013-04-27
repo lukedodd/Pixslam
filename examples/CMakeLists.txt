@@ -1,8 +1,20 @@
 copy_files("copy_examples" ${CMAKE_CURRENT_SOURCE_DIR}/*.psm ${CMAKE_CURRENT_BINARY_DIR})
 
 add_custom_command(
-   OUTPUT min_out.png
-   COMMAND pixslam min.psm ../example_data/lena.png min_out.png
+   OUTPUT compose_out.png
+   COMMAND pixslam compose.psm ../example_data/lena.png ../example_data/duck.png compose_out.png
+   DEPENDS pixslam
+)
+
+add_custom_command(
+   OUTPUT erode_3x3_out.png
+   COMMAND pixslam erode_3x3.psm ../example_data/lena.png erode_3x3_out.png
+   DEPENDS pixslam
+)
+
+add_custom_command(
+   OUTPUT dilate_3x3_out.png
+   COMMAND pixslam dilate_3x3.psm ../example_data/lena.png dilate_3x3_out.png
    DEPENDS pixslam
 )
 
@@ -24,5 +36,5 @@ add_custom_command(
    DEPENDS pixslam
 )
 
-ADD_CUSTOM_TARGET(examples ALL DEPENDS copy_examples copy_example_data min_out.png metaballs_out.png metaballs_binary_out.png metaballs_fancy_out.png)
+ADD_CUSTOM_TARGET(examples ALL DEPENDS copy_examples copy_example_data compose_out.png erode_3x3_out.png dilate_3x3_out.png metaballs_out.png metaballs_binary_out.png metaballs_fancy_out.png)
 

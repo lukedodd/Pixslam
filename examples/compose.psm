@@ -1,0 +1,6 @@
+; Add two images together.
+((A B)
+     ( * 0.5 ; normalise back to [0,1]
+        ( + A B)
+     )
+)

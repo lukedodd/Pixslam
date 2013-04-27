@@ -1,3 +1,5 @@
+; Erode an image with a 3x3 kernel.
+; That is: each pixel takes the value of the minium pixel in a 3x3 neighbourhood.
 ((A)
     (
         min 
