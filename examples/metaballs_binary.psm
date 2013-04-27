@@ -1,5 +1,5 @@
-; Draw some nice metaballs. See: http://en.wikipedia.org/wiki/Metaballs
-((A) 
+; Same as metaballs.psm with some thresholding
+((A) ; input not used, just specifies size
     ( * ; AND the results of two thresholds together
         ( < 0.8 ; pixels below 0.8 to zero
             ( +  
