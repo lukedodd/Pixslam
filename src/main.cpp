@@ -216,7 +216,7 @@ private:
 public:
     CodeGenCalculatorFunction(const Cell &cell) : logger(stdout) {
 
-        compiler.setLogger(&logger);
+        // compiler.setLogger(&logger);
        
         // Check cell is of form ((arg list) (expr))
         if(!(cell.type == Cell::List && cell.list.size() == 2 &&
@@ -581,13 +581,17 @@ std::list<std::string> tokenize(const std::string & str){
     std::list<std::string> tokens;
     const char * s = str.c_str();
     while (*s) {
-        while (*s == ' ' || *s == '\t' || *s == '\n')
+        while(*s == ' ' || *s == '\t' || *s == '\n') // ignore whitespace
             ++s;
-        if (*s == '(' || *s == ')')
+
+        if(*s == ';'){ // skip to newline after a comment
+            while(*s != '\n')
+                ++s;
+        }else if(*s == '(' || *s == ')'){
             tokens.push_back(*s++ == '(' ? "(" : ")");
-        else {
+        }else{
             const char * t = s;
-            while (*t && *t != ' ' && *t != '(' && *t != ')')
+            while(*t && *t != ' ' && *t != '(' && *t != ')')
                 ++t;
             tokens.push_back(std::string(s, t));
             s = t;
