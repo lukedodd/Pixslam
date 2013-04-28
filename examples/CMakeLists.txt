@@ -19,6 +19,18 @@ add_custom_command(
 )
 
 add_custom_command(
+   OUTPUT erode_5x5_out.png
+   COMMAND pixslam --logCommand erode_5x5.psm ../example_data/lena.png erode_5x5_out.png
+   DEPENDS pixslam erode_5x5.psm
+)
+
+add_custom_command(
+   OUTPUT dilate_5x5_out.png
+   COMMAND pixslam --logCommand dilate_5x5.psm ../example_data/lena.png dilate_5x5_out.png
+   DEPENDS pixslam dilate_5x5.psm
+)
+
+add_custom_command(
    OUTPUT min_out.png
    COMMAND pixslam --logCommand min.psm ../example_data/lena.png ../example_data/duck.png min_out.png
    DEPENDS pixslam min.psm
@@ -73,5 +85,5 @@ add_custom_command(
 )
 
 
-ADD_CUSTOM_TARGET(examples ALL DEPENDS copy_examples copy_example_data compose_out.png erode_3x3_out.png dilate_3x3_out.png min_out.png metaballs_out.png metaballs_binary_out.png metaballs_fancy_out.png box_3x3_out_1.png box_3x3_out_2.png box_5x5_out_1.png box_5x5_out_2.png subtract_out.png)
+ADD_CUSTOM_TARGET(examples ALL DEPENDS copy_examples copy_example_data compose_out.png erode_3x3_out.png dilate_3x3_out.png erode_5x5_out.png dilate_5x5_out.png min_out.png metaballs_out.png metaballs_binary_out.png metaballs_fancy_out.png box_3x3_out_1.png box_3x3_out_2.png box_5x5_out_1.png box_5x5_out_2.png subtract_out.png)
 
