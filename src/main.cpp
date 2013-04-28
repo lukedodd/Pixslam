@@ -363,12 +363,17 @@ private:
             const std::vector<AsmJit::XmmVar> &args){
         using namespace AsmJit;
 
+        // std::cout << argNameToIndex.size() << std::endl;
+        // std::cout << argNameToIndex["A"] << std::endl;
+        // std::cout << "functionName: " << functionName << std::endl;
+
         // try builtin function lookup first
         auto it = functionHandlerMap.find(functionName);
         if(it != functionHandlerMap.end()){
             return it->second(args);
         }
 
+        // std::cout << "Not a function." << std::endl;
 
         if(functionName[0] == '@'){
             std::string imageName = std::string(functionName.begin()+1, functionName.end());
@@ -574,6 +579,10 @@ private:
 };
 
 
+bool isWhiteSpace(char c){
+    return c == ' ' || c == '\t' || c == '\n';
+}
+
 // convert given string to list of tokens
 // originally from: 
 // http://howtowriteaprogram.blogspot.co.uk/2010/11/lisp-interpreter-in-90-lines-of-c.html
@@ -581,17 +590,18 @@ std::list<std::string> tokenize(const std::string & str){
     std::list<std::string> tokens;
     const char * s = str.c_str();
     while (*s) {
-        while(*s == ' ' || *s == '\t' || *s == '\n') // ignore whitespace
+        while(isWhiteSpace(*s)) // ignore whitespace
             ++s;
 
-        if(*s == ';'){ // skip to newline after a comment
+        if(*s == ';'){ 
+            // skip to newline after a comment
             while(*s != '\n')
-                ++s;
+                ++s; 
         }else if(*s == '(' || *s == ')'){
             tokens.push_back(*s++ == '(' ? "(" : ")");
         }else{
             const char * t = s;
-            while(*t && *t != ' ' && *t != '(' && *t != ')')
+            while(*t && !isWhiteSpace(*t) && *t != '(' && *t != ')')
                 ++t;
             tokens.push_back(std::string(s, t));
             s = t;

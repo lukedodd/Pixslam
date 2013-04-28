@@ -42,5 +42,17 @@ add_custom_command(
    DEPENDS pixslam
 )
 
-ADD_CUSTOM_TARGET(examples ALL DEPENDS copy_examples copy_example_data compose_out.png erode_3x3_out.png dilate_3x3_out.png min_out.png metaballs_out.png metaballs_binary_out.png metaballs_fancy_out.png)
+add_custom_command(
+   OUTPUT box_3x3_out_1.png
+   COMMAND pixslam box_3x3.psm ../example_data/lena.png box_3x3_out_1.png
+   DEPENDS pixslam
+)
+
+add_custom_command(
+   OUTPUT box_3x3_out_2.png
+   COMMAND pixslam box_3x3.psm metaballs_fancy_out.png box_3x3_out_2.png
+   DEPENDS pixslam
+)
+
+ADD_CUSTOM_TARGET(examples ALL DEPENDS copy_examples copy_example_data compose_out.png erode_3x3_out.png dilate_3x3_out.png min_out.png metaballs_out.png metaballs_binary_out.png metaballs_fancy_out.png box_3x3_out_2.png)
 
