@@ -214,9 +214,10 @@ private:
     AsmJit::FileLogger logger;
 
 public:
-    CodeGenCalculatorFunction(const Cell &cell) : logger(stdout) {
+    CodeGenCalculatorFunction(const Cell &cell, bool stdOutLogging = false) : logger(stdout) {
 
-        // compiler.setLogger(&logger);
+        if(stdOutLogging)
+            compiler.setLogger(&logger);
        
         // Check cell is of form ((arg list) (expr))
         if(!(cell.type == Cell::List && cell.list.size() == 2 &&
@@ -649,7 +650,12 @@ Cell read(const std::string & s)
     return read_from(tokens);
 }
 
-void logCommandLine(int argc, char *argv[], const std::string &fileName){
+void logCommandLine(int argc, char *argv[], const std::string &filePrefix){
+    #ifdef _WIN32
+        std::string fileName = filePrefix + ".bat";
+    #else
+        std::string fileName = filePrefix + ".sh";
+    #endif
     std::ofstream out(fileName, std::ios::out);
 
     for(int i = 0; i < argc; ++i)
@@ -719,7 +725,7 @@ int main (int argc, char *argsRaw[])
 
     // Generate code.
     Cell code = read(codeString);
-    CodeGenCalculatorFunction cgFunction(code);
+    CodeGenCalculatorFunction cgFunction(code, logAsm);
 
     // Read image from second arg
     int padding = 5;
@@ -735,7 +741,7 @@ int main (int argc, char *argsRaw[])
         outputImagePath = argv[3 +cgFunction.getNumArgs()-1];
 
     // log command line if requested (useful for easy to understand examples directory)
-    if(logCommand) logCommandLine(argc, argsRaw, outputImagePath + ".txt");
+    if(logCommand) logCommandLine(argc, argsRaw, outputImagePath);
 
     // Look at a subimages so we can process edges safely.
     std::vector<Image> inputImageViews;
