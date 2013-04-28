@@ -649,9 +649,17 @@ Cell read(const std::string & s)
     return read_from(tokens);
 }
 
-int main (int argc, char *argv[])
-{
+void logCommandLine(int argc, char *argv[], const std::string &fileName){
+    std::ofstream out(fileName, std::ios::out);
 
+    for(int i = 0; i < argc; ++i)
+        out << argv[i] << " ";
+
+    out << std::endl;
+}
+
+int main (int argc, char *argsRaw[])
+{
     if(argc < 3){
         std::cout << "Usage:\n\n";
         std::cout << "    pixslam <code> <input-images> <output>\n\n";
@@ -668,6 +676,34 @@ int main (int argc, char *argv[])
         std::cout << "    pixslam ((A B) (* 0.5 (+ A B))) image1.png image2.png blend.png\n\n";
         return 1;
     }
+
+    std::vector<std::string> argv;
+    std::vector<std::string> options;
+
+    // separate options from file/code arguments
+    for(int i = 0; i < argc; ++i){
+        char *s = argsRaw[i];
+        if(*s != '-')
+            argv.emplace_back(s);
+        else
+            options.emplace_back(s);
+    }
+
+    // parse command line arguments
+    bool logAsm = false;
+    bool logCommand = false;
+    for(auto s : options){
+        if(s == "--logAsm")
+            logAsm = true;
+        else if(s == "--logCommand")
+            logCommand = true;
+        else{
+            std::cerr << "Unrecognised command line switch: " << s << std::endl;
+            return 0;
+        }
+            
+    }
+
 
     // See if first arg is a file and read code from it.
     std::string codeString;
@@ -697,6 +733,9 @@ int main (int argc, char *argv[])
     std::string outputImagePath = "out.png";
     if(size_t(argc) >= 3 + cgFunction.getNumArgs())
         outputImagePath = argv[3 +cgFunction.getNumArgs()-1];
+
+    // log command line if requested (useful for easy to understand examples directory)
+    if(logCommand) logCommandLine(argc, argsRaw, outputImagePath + ".txt");
 
     // Look at a subimages so we can process edges safely.
     std::vector<Image> inputImageViews;
