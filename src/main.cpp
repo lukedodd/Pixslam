@@ -543,7 +543,7 @@ private:
             XmmVar ret = compiler.newXmmVar();
             compiler.movq(ret, args[0]);
 
-            compiler.cmpsd(ret, args[1], 1);
+            compiler.cmpsd(ret, args[1], 1); // LT
             compiler.andpd(ret, one);
             return ret;
         };
@@ -552,7 +552,7 @@ private:
             XmmVar ret = compiler.newXmmVar();
             compiler.movq(ret, args[1]);
 
-            compiler.cmpsd(ret, args[0], 1);
+            compiler.cmpsd(ret, args[0], 1); // LT
             compiler.andpd(ret, one);
             return ret;
         };
@@ -561,7 +561,7 @@ private:
             XmmVar ret = compiler.newXmmVar();
             compiler.movq(ret, args[0]);
 
-            compiler.cmpsd(ret, args[1], 2);
+            compiler.cmpsd(ret, args[1], 2); // LEQ
             compiler.andpd(ret, one);
             return ret;
         };
@@ -570,7 +570,7 @@ private:
             XmmVar ret = compiler.newXmmVar();
             compiler.movq(ret, args[1]);
 
-            compiler.cmpsd(ret, args[0], 2);
+            compiler.cmpsd(ret, args[0], 2); // LEQ
             compiler.andpd(ret, one);
             return ret;
         };
@@ -579,12 +579,22 @@ private:
             XmmVar ret = compiler.newXmmVar();
             compiler.movq(ret, args[1]);
 
-            compiler.cmpsd(ret, args[0], 0);
+            compiler.cmpsd(ret, args[0], 0); // EQ
+            compiler.andpd(ret, one);
+            return ret;
+        };
+
+        functionHandlerMap["!="] = [&](const std::vector<XmmVar> &args) -> XmmVar{
+            XmmVar ret = compiler.newXmmVar();
+            compiler.movq(ret, args[1]);
+
+            compiler.cmpsd(ret, args[0], 4); // NEQ
             compiler.andpd(ret, one);
             return ret;
         };
 
  
+
     }
 
 };
