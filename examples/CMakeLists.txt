@@ -94,19 +94,19 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/game_of_life)
 
 # Loop to generate lots of iterations of game of life.
 add_custom_command(
-   OUTPUT game_of_life_0.png
-   COMMAND pixslam --logCommand game_of_life.psm ../example_data/glider_gun.png game_of_life_0.png
+   OUTPUT game_of_life/game_of_life_0.png
+   COMMAND pixslam --logCommand game_of_life.psm ../example_data/glider_gun.png game_of_life/game_of_life_0.png
    DEPENDS pixslam game_of_life.psm
 )
 set( number 0 )
-while( number LESS 25 )
+while( number LESS 100 )
     math( EXPR number "${number} + 1" )
     math( EXPR prev "${number} - 1" )
     add_custom_command(
-       OUTPUT game_of_life_${number}.png
-       COMMAND pixslam --logCommand game_of_life.psm game_of_life_${prev}.png game_of_life_${number}.png
-       DEPENDS pixslam game_of_life.psm game_of_life_${prev}.png
+       OUTPUT game_of_life/game_of_life_${number}.png
+       COMMAND pixslam --logCommand game_of_life.psm game_of_life/game_of_life_${prev}.png game_of_life/game_of_life_${number}.png
+       DEPENDS pixslam game_of_life.psm game_of_life/game_of_life_${prev}.png
     )
 endwhile( number LESS 25 )
 
-add_custom_target(example_game_of_life ALL DEPENDS game_of_life_${prev}.png)
+add_custom_target(example_game_of_life ALL DEPENDS game_of_life/game_of_life_${prev}.png)
