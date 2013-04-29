@@ -574,6 +574,16 @@ private:
             compiler.andpd(ret, one);
             return ret;
         };
+            
+        functionHandlerMap["=="] = [&](const std::vector<XmmVar> &args) -> XmmVar{
+            XmmVar ret = compiler.newXmmVar();
+            compiler.movq(ret, args[1]);
+
+            compiler.cmpsd(ret, args[0], 0);
+            compiler.andpd(ret, one);
+            return ret;
+        };
+
  
     }
 
