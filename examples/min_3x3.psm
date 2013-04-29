@@ -1,4 +1,0 @@
-; return the element-wise minimum of two images
-((A B)
- (min A B)
-)
