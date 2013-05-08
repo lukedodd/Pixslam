@@ -84,29 +84,6 @@ add_custom_command(
    DEPENDS pixslam subtract.psm metaballs_fancy_out.png box_5x5_out_2.png 
 )
 
-
 add_custom_target(examples ALL DEPENDS copy_examples copy_example_data compose_out.png erode_3x3_out.png dilate_3x3_out.png erode_5x5_out.png dilate_5x5_out.png min_out.png metaballs_out.png metaballs_binary_out.png metaballs_fancy_out.png box_3x3_out_1.png box_3x3_out_2.png box_5x5_out_1.png box_5x5_out_2.png subtract_out.png)
 
-
-
-# Special game of life example.
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/game_of_life)
-
-# Loop to generate lots of iterations of game of life.
-add_custom_command(
-   OUTPUT game_of_life/game_of_life_0.png
-   COMMAND pixslam --logCommand game_of_life.psm ../example_data/glider_gun.png game_of_life/game_of_life_0.png
-   DEPENDS pixslam game_of_life.psm
-)
-set( number 0 )
-while( number LESS 100 )
-    math( EXPR number "${number} + 1" )
-    math( EXPR prev "${number} - 1" )
-    add_custom_command(
-       OUTPUT game_of_life/game_of_life_${number}.png
-       COMMAND pixslam --logCommand game_of_life.psm game_of_life/game_of_life_${prev}.png game_of_life/game_of_life_${number}.png
-       DEPENDS pixslam game_of_life.psm game_of_life/game_of_life_${prev}.png
-    )
-endwhile( number LESS 25 )
-
-add_custom_target(example_game_of_life ALL DEPENDS game_of_life/game_of_life_${prev}.png)
+add_subdirectory(game_of_life)
