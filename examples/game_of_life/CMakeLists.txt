@@ -12,12 +12,15 @@
 copy_files("copy_game_of_life_example" ${CMAKE_CURRENT_SOURCE_DIR}/*.psm ${CMAKE_CURRENT_BINARY_DIR})
 
 add_custom_command(
-   OUTPUT game_of_life_0.png
-   COMMAND pixslam --logCommand game_of_life.psm ../../example_data/glider_gun.png game_of_life_0.png
+   OUTPUT game_of_life_1001.png
+   COMMAND pixslam --logCommand game_of_life.psm ../../example_data/glider_gun.png game_of_life_1001.png
    DEPENDS pixslam game_of_life.psm
 )
-set( number 0 )
-while( number LESS 100 )
+
+# Start with a high number so lexicographic ordering does not break.
+# (Let's us play in order easily in lots of image viewers to "animate")
+set( number 1001 )
+while( number LESS 1200 )
     math( EXPR number "${number} + 1" )
     math( EXPR prev "${number} - 1" )
     add_custom_command(
@@ -25,6 +28,6 @@ while( number LESS 100 )
        COMMAND pixslam --logCommand game_of_life.psm game_of_life_${prev}.png game_of_life_${number}.png
        DEPENDS pixslam game_of_life.psm game_of_life_${prev}.png
     )
-endwhile( number LESS 100 )
+endwhile( number LESS 1200 )
 
 add_custom_target(example_game_of_life ALL DEPENDS game_of_life_${prev}.png)
