@@ -22,7 +22,7 @@ public:
 
     // Load from png image.
     // File errors result in a 0x0 sized image.
-    Image(const std::string &path);
+    explicit Image(const std::string &path);
 
     // Construct new, zeroed, image.
     Image(int w, int h) : w(w), h(h), s(w), ownsData(true){
