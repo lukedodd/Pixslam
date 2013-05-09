@@ -5,7 +5,7 @@
 
 #include "Image.h"
 #include "Parser.h"
-#include "Compiler.h"
+#include "JitImageFunction.h"
 
 using namespace pixslam;
 
@@ -90,7 +90,7 @@ int main (int argc, char *argsRaw[])
 
     // Generate code.
     Cell code = cellFromString(codeString);
-    Compiler cgFunction(code, logAsm);
+    JitImageFunction cgFunction(code, logAsm);
 
     // Read in input images specified by arguments.
     int padding = 5;
