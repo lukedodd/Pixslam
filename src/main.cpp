@@ -18,15 +18,20 @@
 #include <stb_image_write.h>
 
 
-typedef double PixType;
 class Image{
 private:
+
+    // TODO: think about dealing with different datatypes?
+    // The image class is easy, but code generation on floats/doubles/chars and multichannels
+    // could get complex!
+    typedef double PixType;
+
     PixType *data;
     int w, h;
     int s;
     bool ownsData;
-public:
 
+public:
     Image(const std::string &path) : ownsData(true){
         int n;
         // load image as greyscale
@@ -281,13 +286,11 @@ public:
         generatedFunction(&args[0], w, h, stride, out); 
     }
 
-
     virtual size_t getNumArgs() const {return argNameToIndex.size();}
 
     virtual ~CodeGenCalculatorFunction(){
         AsmJit::MemoryManager::getGlobal()->free((void*)generatedFunction); 
     }
-
 
 private:
     FuncPtrType generate(const Cell &c){
@@ -475,7 +478,6 @@ private:
     void PopulateBuiltInFunctionHandlerMap(){
         using namespace AsmJit;
 
-
         // TODO: This could be cleaner, the pattern is the same up to max,
         // but we're not sharing any code.
         functionHandlerMap["+"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
@@ -486,7 +488,6 @@ private:
             });
             return ret;
         };
-
 
         functionHandlerMap["-"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
             XmmVar ret = compiler.newXmmVar();
@@ -526,7 +527,6 @@ private:
             });
             return ret;
         };
-
 
 
         functionHandlerMap["max"] = [&](const std::vector<XmmVar> &args) -> XmmVar{
@@ -592,11 +592,7 @@ private:
             compiler.andpd(ret, one);
             return ret;
         };
-
- 
-
     }
-
 };
 
 
@@ -725,23 +721,29 @@ int main (int argc, char *argsRaw[])
             logCommand = true;
         else{
             std::cerr << "Unrecognised command line switch: " << s << std::endl;
-            return 0;
+            return 1;
         }
             
     }
 
 
     // See if first arg is a file and read code from it.
+    // We infer file by checking that first char is not a '(' (cheeky but it works!)
+    // Otherwise we interperate the argument as code directly.
     std::string codeString;
-    std::ifstream ifs(argv[1]);
-    if(ifs){
-        std::stringstream buffer;
-        buffer << ifs.rdbuf();
-        codeString = buffer.str();
-    }
-
-    if(codeString.empty()) // If that didn't work interpret first arg as code.
+    if(argv[1].size() > 0 && argv[1][0] != '('){
+        std::ifstream ifs(argv[1]);
+        if(ifs){
+            std::stringstream buffer;
+            buffer << ifs.rdbuf();
+            codeString = buffer.str();
+        }else{
+            std::cout << "Could not find file " << argv[1] << std::endl;
+            return 1;
+        }
+    }else{ 
         codeString = argv[1];
+    }
 
     // Generate code.
     Cell code = read(codeString);
@@ -773,10 +775,6 @@ int main (int argc, char *argsRaw[])
 
     // Perpare output image.
     Image outIm(inputImageViews[0].width(), inputImageViews[0].height(), inputImageViews[0].stride());
-
-    // std::vector<const double*>  d; d.push_back(inputImageViews[0].getData());
-    // cgFunction(d, inputImageViews[0].width(), inputImageViews[0].height(), inputImageViews[0].stride(), outView.getData());
-
 
     // Process images!
     cgFunction(inputImageViews, outIm);
