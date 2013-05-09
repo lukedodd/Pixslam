@@ -7,7 +7,7 @@ namespace{
         return c == ' ' || c == '\t' || c == '\n';
     }
 
-    bool isdig(char c) { return isdigit(static_cast<unsigned char>(c)) != 0; }
+    bool isDig(char c) { return isdigit(static_cast<unsigned char>(c)) != 0; }
 
 }
 namespace pixslam{
@@ -15,12 +15,12 @@ namespace pixslam{
 
 // originally from: 
 // http://howtowriteaprogram.blogspot.co.uk/2010/11/lisp-interpreter-in-90-lines-of-c.html
-std::string to_string(const Cell & exp)
+std::string cellToString(const Cell & exp)
 {
     if (exp.type == Cell::List) {
         std::string s("(");
         for (Cell::iter e = exp.list.begin(); e != exp.list.end(); ++e)
-            s += to_string(*e) + ' ';
+            s += cellToString(*e) + ' ';
         if (s[s.size() - 1] == ' ')
             s.erase(s.size() - 1);
         return s + ')';
@@ -63,21 +63,21 @@ namespace{
     // http://howtowriteaprogram.blogspot.co.uk/2010/11/lisp-interpreter-in-90-lines-of-c.html
     Cell atom(const std::string & token)
     {
-        if (isdig(token[0]) || (token[0] == '-' && isdig(token[1])))
+        if (isDig(token[0]) || (token[0] == '-' && isDig(token[1])))
             return Cell(Cell::Number, token);
         return Cell(Cell::Symbol, token);
     }
     // return the Lisp expression in the given tokens
     // originally from: 
     // http://howtowriteaprogram.blogspot.co.uk/2010/11/lisp-interpreter-in-90-lines-of-c.html
-    Cell read_from(std::list<std::string> & tokens)
+    Cell readFrom(std::list<std::string> & tokens)
     {
         const std::string token(tokens.front());
         tokens.pop_front();
         if (token == "(") {
             Cell c(Cell::List);
             while (tokens.front() != ")")
-                c.list.push_back(read_from(tokens));
+                c.list.push_back(readFrom(tokens));
             tokens.pop_front();
             return c;
         }
@@ -88,10 +88,10 @@ namespace{
 
 // originally from: 
 // http://howtowriteaprogram.blogspot.co.uk/2010/11/lisp-interpreter-in-90-lines-of-c.html
-Cell read(const std::string & s)
+Cell cellFromString(const std::string & s)
 {
     std::list<std::string> tokens(tokenize(s));
-    return read_from(tokens);
+    return readFrom(tokens);
 }
 
 }

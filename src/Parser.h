@@ -15,9 +15,9 @@ struct Cell{
 };
 
 // convert given Cell to a Lisp-readable string
-std::string to_string(const Cell & exp);
+std::string cellToString(const Cell & exp);
 
 // return the Lisp expression represented by the given string
-Cell read(const std::string & s);
+Cell cellFromString(const std::string & s);
 
 }

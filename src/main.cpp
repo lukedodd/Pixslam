@@ -549,7 +549,7 @@ int main (int argc, char *argsRaw[])
     }
 
     // Generate code.
-    Cell code = read(codeString);
+    Cell code = cellFromString(codeString);
     Compiler cgFunction(code, logAsm);
 
     // Read in input images specified by arguments.
