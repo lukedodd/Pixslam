@@ -12,139 +12,12 @@
 #include <sstream>
 #include <fstream>
 
-#include <asmjit/asmjit.h>
+#include "asmjit/asmjit.h"
 
-#include <stb_image.h>
-#include <stb_image_write.h>
+#include "Image.h"
+#include "Parser.h"
 
-
-class Image{
-private:
-
-    // TODO: think about dealing with different datatypes?
-    // The image class is easy, but code generation on floats/doubles/chars and multichannels
-    // could get complex!
-    typedef double PixType;
-
-    PixType *data;
-    int w, h;
-    int s;
-    bool ownsData;
-
-public:
-    Image(const std::string &path) : ownsData(true){
-        int n;
-        // load image as greyscale
-        unsigned char *datauc = stbi_load(path.c_str(), &w, &h, &n, 1);
-        s = w;
-
-        data = new PixType[w*h];
-        for(int i = 0; i < w*h; ++i)
-            data[i] = datauc[i]/255.0;
-
-        stbi_image_free(datauc);
-    }
-
-    Image(int w, int h) : w(w), h(h), s(w), ownsData(true){
-        data = new PixType[w*h];
-        std::fill(data, data+(w*h), 0.0);
-    }
-
-    Image(int w_, int h_, int s_) : w(w_), h(h_), s(s_), ownsData(true){
-        data = new PixType[h*s];
-        std::fill(data, data+(h*s), 0.0);
-    }
-
-
-
-    Image(PixType *data, int w, int h, int s)
-        : data(data), w(w), h(h), s(s), ownsData(false)
-    {
-    }
-
-    Image(const Image &original, int padx, int pady)
-        : w(original.width() + padx*2), h(original.height() + pady*2), s(w), ownsData(true){
-        data = new PixType[w*h];
-        std::fill(data, data+(w*h), 0.0);
-        for(int i = 0; i < original.height(); ++i){
-            for(int j = 0; j < original.width(); ++j){
-                (*this)(i+pady, j+padx) = original(i,j);
-            }
-        }
-    }
-
-    // Forbid copy and assignment for now, allow move.
-    Image(const Image &) = delete;
-    Image &operator=(const Image&) = delete;
-
-    Image(Image&& other) : 
-        data(other.data), w(other.w), h(other.h), s(other.s), ownsData(other.ownsData){
-        other.data = 0;
-    }
-
-    int width() const {return w;}
-    int height() const {return h;}
-    int stride() const {return s;}
-
-    PixType &operator()(int i, int j){
-        return data[i*s +j];
-    }
-
-    const PixType &operator()(int i, int j) const {
-        return data[i*s +j];
-    }
-
-    PixType *getData(){
-        return data;
-    }
-
-    const PixType *getData() const{
-        return data;
-    }
-
-    void write(const std::string &dest) const {
-        std::vector<unsigned char> datauc(w*h);
-
-        for(int i = 0; i < w; ++i)
-            for(int j = 0; j < h; ++j)
-                datauc[i*w + j] = (unsigned char)(std::max(
-                                  std::min((*this)(i,j)*255.0, 255.0), 0.0));
-
-        stbi_write_png(dest.c_str(), w, h, 1, &datauc[0], w);
-    }
-
-    ~Image(){
-        if(ownsData && data)
-            delete [] data; 
-    }
-
-};
-
-struct Cell{
-    enum Type {Symbol, Number, List};
-    typedef Cell (*proc_type)(const std::vector<Cell> &);
-    typedef std::vector<Cell>::const_iterator iter;
-    Type type; std::string val; std::vector<Cell> list;
-    Cell(Type type = Symbol) : type(type) {}
-    Cell(Type type, const std::string & val) : type(type), val(val) {}
-};
-
-
-// convert given Cell to a Lisp-readable string
-// originally from: 
-// http://howtowriteaprogram.blogspot.co.uk/2010/11/lisp-interpreter-in-90-lines-of-c.html
-std::string to_string(const Cell & exp)
-{
-    if (exp.type == Cell::List) {
-        std::string s("(");
-        for (Cell::iter e = exp.list.begin(); e != exp.list.end(); ++e)
-            s += to_string(*e) + ' ';
-        if (s[s.size() - 1] == ' ')
-            s.erase(s.size() - 1);
-        return s + ')';
-    }
-    return exp.val;
-}
+using namespace pixslam;
 
 template <typename EvalReturn> class Visitor{
 public:
@@ -596,76 +469,6 @@ private:
 };
 
 
-bool isWhiteSpace(char c){
-    return c == ' ' || c == '\t' || c == '\n';
-}
-
-// convert given string to list of tokens
-// originally from: 
-// http://howtowriteaprogram.blogspot.co.uk/2010/11/lisp-interpreter-in-90-lines-of-c.html
-std::list<std::string> tokenize(const std::string & str){
-    std::list<std::string> tokens;
-    const char * s = str.c_str();
-    while (*s) {
-        while(isWhiteSpace(*s)) // ignore whitespace
-            ++s;
-
-        if(*s == ';'){ 
-            // skip to newline after a comment
-            while(*s != '\n')
-                ++s; 
-        }else if(*s == '(' || *s == ')'){
-            tokens.push_back(*s++ == '(' ? "(" : ")");
-        }else{
-            const char * t = s;
-            while(*t && !isWhiteSpace(*t) && *t != '(' && *t != ')')
-                ++t;
-            tokens.push_back(std::string(s, t));
-            s = t;
-        }
-    }
-    return tokens;
-}
-
-bool isdig(char c) { return isdigit(static_cast<unsigned char>(c)) != 0; }
-
-// numbers become Numbers; every other token is a Symbol
-// originally from: 
-// http://howtowriteaprogram.blogspot.co.uk/2010/11/lisp-interpreter-in-90-lines-of-c.html
-Cell atom(const std::string & token)
-{
-    if (isdig(token[0]) || (token[0] == '-' && isdig(token[1])))
-        return Cell(Cell::Number, token);
-    return Cell(Cell::Symbol, token);
-}
-
-// return the Lisp expression in the given tokens
-// originally from: 
-// http://howtowriteaprogram.blogspot.co.uk/2010/11/lisp-interpreter-in-90-lines-of-c.html
-Cell read_from(std::list<std::string> & tokens)
-{
-    const std::string token(tokens.front());
-    tokens.pop_front();
-    if (token == "(") {
-        Cell c(Cell::List);
-        while (tokens.front() != ")")
-            c.list.push_back(read_from(tokens));
-        tokens.pop_front();
-        return c;
-    }
-    else
-        return atom(token);
-}
-
-// return the Lisp expression represented by the given string
-// originally from: 
-// http://howtowriteaprogram.blogspot.co.uk/2010/11/lisp-interpreter-in-90-lines-of-c.html
-Cell read(const std::string & s)
-{
-    std::list<std::string> tokens(tokenize(s));
-    return read_from(tokens);
-}
-
 void logCommandLine(int argc, char *argv[], const std::string &filePrefix){
     #ifdef _WIN32
         std::string fileName = filePrefix + ".bat";
@@ -749,11 +552,17 @@ int main (int argc, char *argsRaw[])
     Cell code = read(codeString);
     Compiler cgFunction(code, logAsm);
 
-    // Read image from second arg
+    // Read in input images specified by arguments.
     int padding = 5;
     std::vector<Image> inputImages;
     for(size_t i = 0; i < cgFunction.getNumArgs(); ++i){
         Image im(argv[2+i]);
+
+        if(im.width()*im.height() == 0){
+            std::cout << "Failed to load image " << argv[2+i] << std::endl;
+            return 1;
+        }
+
         inputImages.emplace_back(im, padding, padding);
     }
 
