@@ -183,7 +183,7 @@ protected:
 
 };
 
-class CodeGenCalculatorFunction : public Visitor<AsmJit::XmmVar>{
+class Compiler : public Visitor<AsmJit::XmmVar>{
 private:
     typedef std::function<AsmJit::XmmVar (const std::vector<AsmJit::XmmVar> &)> 
         BuiltInFunctionHandler;
@@ -219,7 +219,7 @@ private:
     AsmJit::FileLogger logger;
 
 public:
-    CodeGenCalculatorFunction(const Cell &cell, bool stdOutLogging = false) : logger(stdout) {
+    Compiler(const Cell &cell, bool stdOutLogging = false) : logger(stdout) {
 
         if(stdOutLogging)
             compiler.setLogger(&logger);
@@ -288,7 +288,7 @@ public:
 
     virtual size_t getNumArgs() const {return argNameToIndex.size();}
 
-    virtual ~CodeGenCalculatorFunction(){
+    virtual ~Compiler(){
         AsmJit::MemoryManager::getGlobal()->free((void*)generatedFunction); 
     }
 
@@ -747,7 +747,7 @@ int main (int argc, char *argsRaw[])
 
     // Generate code.
     Cell code = read(codeString);
-    CodeGenCalculatorFunction cgFunction(code, logAsm);
+    Compiler cgFunction(code, logAsm);
 
     // Read image from second arg
     int padding = 5;
