@@ -167,6 +167,11 @@ AsmJit::XmmVar JitImageFunction::symbolHandler(const std::string &name){
         AsmJit::GpVar index = name == "i" ? currentI : currentJ;
         compiler.cvtsi2sd(v, index);
         return v;
+    }else if(name == "width" || name == "height"){
+        XmmVar v(compiler.newXmmVar());
+        AsmJit::GpVar index = name == "w" ? w : h;
+        compiler.cvtsi2sd(v, index);
+        return v;
     }else if(symbols.find(name) != symbols.end()){
         return symbols[name];
     }

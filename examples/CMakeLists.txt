@@ -84,6 +84,12 @@ add_custom_command(
    DEPENDS pixslam subtract.psm metaballs_fancy_out.png box_5x5_out_2.png 
 )
 
-add_custom_target(examples ALL DEPENDS copy_examples copy_example_data compose_out.png erode_3x3_out.png dilate_3x3_out.png erode_5x5_out.png dilate_5x5_out.png min_out.png metaballs_out.png metaballs_binary_out.png metaballs_fancy_out.png box_3x3_out_1.png box_3x3_out_2.png box_5x5_out_1.png box_5x5_out_2.png subtract_out.png)
+add_custom_command(
+   OUTPUT flipped_duck.png
+   COMMAND pixslam --logCommand flip_vertical.psm ../example_data/duck.png filpped_duck.png
+   DEPENDS pixslam flip_vertical.psm 
+)
+
+add_custom_target(examples ALL DEPENDS copy_examples copy_example_data compose_out.png erode_3x3_out.png dilate_3x3_out.png erode_5x5_out.png dilate_5x5_out.png min_out.png metaballs_out.png metaballs_binary_out.png metaballs_fancy_out.png box_3x3_out_1.png box_3x3_out_2.png box_5x5_out_1.png box_5x5_out_2.png subtract_out.png flipped_duck.png)
 
 add_subdirectory(game_of_life)
