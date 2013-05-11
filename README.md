@@ -3,10 +3,11 @@ Pixslam
 
 Pixslam is a toy language for image processing.
 
-Pixslam has two main features. 
+Pixslam has three main features. 
 
 * Pixslam is dedicated to image processing, pixslam is designed for elegantly expressing programs which operate pixel wise on images.
 * Pixslam features just in time compilation (JIT) to x86-64 code, this allows for rapid experimentation with image processing which would otherwise be impossibly slow in an interpreted language.
+* Pixslam is lightweight and has no complex build dependencies. So it could be integrated into other applications easily.
 
 Right now Pixslam is very much a toy. While more features are planned it is important to note this project was made for my own entertainment rather than to be _useful_.
 
@@ -20,7 +21,7 @@ Standard out of source CMake build. Works on Linux (probably other x86-64 unix O
 For Linux builds. Clone the Pixslam repository to somewhere and then do the following:
 
 ```bash
-mkidr pixslam_build
+mkdir pixslam_build
 cd pixslam_build
 cmake /path/to/pixlsam/source/folder
 make
@@ -36,15 +37,27 @@ For Windows builds:
 Running Pixslam
 --------------
 
-TODO. Brief description of how to run Pixslam from CLI. Mention supported image formats.
+The build process described above will have generated a `pixslam` executable for you. The `pixslam` command makes it very easy to run Pixslam functions on specified input images and write the resulting image to a file.
 
-Examples
+Usage:
+
+```
+pixslam <code> [input-images] <output>
+```
+
+Code can either be supplied directly on the command line (don't forget to surround with double quotes), or as a file path to read in. The number of input images read is dependent on the supplied code. The output argument is optional - it defaults to out.png if not specified. 
+
+Help and simple examples for running `pixslam` are displayed if you run it with no arguments.
+
+A reasonable number of input image formats are supported: jpeg, PNG and BMP. Colour input images can be used but Pixslam will treat them as greyscale. The output image type will be PNG regardless of the extension you give it.
+
+Showcase
 --------
 
-TODO. Just show code for some of the most interesting examples and the source + generated images.
+TODO. Show code for some of the most interesting examples and the source + generated images.
 
 
 Documentation
 -------------
 
-For now this project is documented by examples. The build process runs lots of example Pixslam code. After the build described above you should see an `examples` directory in your build directory. This will be filled with `.psm` Pixslam source files, generated images, and shell or batch files which show how Pixslam was run to generate each output.
+For now this project is documented by examples. Some of those are shown above. The build process runs lots of example Pixslam code. After you build Pixslam you should see an `examples` directory in your build directory. This will be filled with `.psm` Pixslam source files, generated images, and shell or batch files which show how Pixslam was run to generate each output.

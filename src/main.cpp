@@ -28,12 +28,12 @@ int main (int argc, char *argsRaw[])
 {
     if(argc < 3){
         std::cout << "Usage:\n\n";
-        std::cout << "    pixslam <code> <input-images> <output>\n\n";
+        std::cout << "    pixslam <code> [input-images] <output>\n\n";
         std::cout << "Code can either be supplied directly, or as a file path to read in.\n";
-        std::cout << "The number of input images read is depndent on the supplied code.\n";
+        std::cout << "The number of input images read is dependent on the supplied code.\n";
         std::cout << "The output argument is optional, defaults to out.png.\n\n";
         std::cout << "e.g:\n";
-        std::cout << "Muliply image by 2 and output to out.png.\n\n";
+        std::cout << "Multiply image by 2 and output to out.png.\n\n";
         std::cout << "    pixslam \"((A) (* A 2))\" image.png\n\n";
         std::cout << "If file mult_by_two.pixslam contains \"(* A 2)\" then the following \n";
         std::cout << "multiplies image.png by 2 and output to image_times_two.png.\n\n";
