@@ -2,34 +2,15 @@
 
 #include <list>
 
+namespace pixslam{
+
 namespace{
+    // Anonymous nested name space for functions required to implement parsing/printing
     bool isWhiteSpace(char c){
         return c == ' ' || c == '\t' || c == '\n';
     }
 
     bool isDig(char c) { return isdigit(static_cast<unsigned char>(c)) != 0; }
-
-}
-namespace pixslam{
-
-
-// originally from: 
-// http://howtowriteaprogram.blogspot.co.uk/2010/11/lisp-interpreter-in-90-lines-of-c.html
-std::string cellToString(const Cell & exp)
-{
-    if (exp.type == Cell::List) {
-        std::string s("(");
-        for (Cell::iter e = exp.list.begin(); e != exp.list.end(); ++e)
-            s += cellToString(*e) + ' ';
-        if (s[s.size() - 1] == ' ')
-            s.erase(s.size() - 1);
-        return s + ')';
-    }
-    return exp.val;
-}
-
-namespace{
-    // Anonymous nested name space for functions required to implement read
 
     // convert given string to list of tokens
     // originally from: 
@@ -92,6 +73,21 @@ Cell cellFromString(const std::string & s)
 {
     std::list<std::string> tokens(tokenize(s));
     return readFrom(tokens);
+}
+
+// originally from: 
+// http://howtowriteaprogram.blogspot.co.uk/2010/11/lisp-interpreter-in-90-lines-of-c.html
+std::string cellToString(const Cell & exp)
+{
+    if (exp.type == Cell::List) {
+        std::string s("(");
+        for (Cell::iter e = exp.list.begin(); e != exp.list.end(); ++e)
+            s += cellToString(*e) + ' ';
+        if (s[s.size() - 1] == ' ')
+            s.erase(s.size() - 1);
+        return s + ')';
+    }
+    return exp.val;
 }
 
 }
