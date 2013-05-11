@@ -1,0 +1,3 @@
+; Flip image vertically.
+; Demos absolute indexing operator.
+((A) (@A (- height i) j))

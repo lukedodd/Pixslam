@@ -56,9 +56,6 @@ public:
         }
     }
 
-    // Forbid copy and assignment for now, allow move.
-    Image(const Image &) = delete;
-    Image &operator=(const Image&) = delete;
 
     // Move constructor - so we can put Images in std::vector
     Image(Image&& other) : 
@@ -92,7 +89,11 @@ public:
         if(ownsData && data)
             delete [] data; 
     }
-
+private:
+    // Forbid copy and assignment for now, allow move.
+    // (Sadly "= delete" syntax does not work in MSVC2012)
+    Image(const Image &);
+    Image &operator=(const Image&);
 };
 
 }
