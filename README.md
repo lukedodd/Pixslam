@@ -3,9 +3,9 @@ Pixslam
 
 Pixslam is a toy language for image processing.
 
-Pixslam has two main features. Firstly it is dedicated to image processing, pixslam is for writing programs which operate pixel wise on images. Secondly it features just in time compilation to x86-64 code, this allows experimentation with image processing code which can be impossibly slow in a normal dynamic language.
+Pixslam has two main features. Firstly it is dedicated to image processing, pixslam is designed for elegantly expressing programs which operate pixel wise on images. Secondly pixslam features just in time compilation to x86-64 code, this allows for rapid experimentation with image processing which would otherwise be impossibly slow in an interpreted language.
 
-Right now Pixslam is very much a toy. While more features are planned it is important to note this project was made for my my own entertainment and not to be _useful_.
+Right now Pixslam is very much a toy. While more features are planned it is important to note this project was made for my own entertainment rather than to be _useful_.
 
 Installation
 ------------
@@ -22,4 +22,4 @@ make
 Documentation
 -------------
 
-Fow now this project is documented by examples. After the build described above you should see an `examples` foldr in your build directory. This will be filled with `.psm` pixslam source files, images, and shell or batch files which show how pixslam was called to generate each output.
+For now this project is documented by examples. The build process runs lots of example Pixslam code. After the build described above you should see an `examples` directory in your build directory. This will be filled with `.psm` Pixslam source files, generated images, and shell or batch files which show how Pixslam was called to generate each output.
