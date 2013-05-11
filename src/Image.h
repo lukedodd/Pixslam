@@ -44,8 +44,8 @@ public:
     {
     }
 
-    // Copy constructor
-    Image(const Image &original, int padx, int pady)
+    // Copy an image with added padding.
+    explicit Image(const Image &original, int padx, int pady)
         : w(original.width() + padx*2), h(original.height() + pady*2), s(w), ownsData(true){
         data = new PixType[w*h];
         std::fill(data, data+(w*h), 0.0);
@@ -57,10 +57,10 @@ public:
     }
 
 
-    // Move constructor - so we can put Images in std::vector
+    // Move constructor (let's us put Images in std::vector)
     Image(Image&& other) : 
         data(other.data), w(other.w), h(other.h), s(other.s), ownsData(other.ownsData){
-        other.data = 0;
+        other.data = nullptr;
     }
 
     int width() const {return w;}
@@ -90,9 +90,9 @@ public:
             delete [] data; 
     }
 
+    // Forbid copy and assignment for now.
 #ifdef WIN32
 private:
-    // Forbid copy and assignment for now, allow move.
     // (Sadly "= delete" syntax does not work in MSVC2012)
     Image(const Image &);
     Image &operator=(const Image&);
