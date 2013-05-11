@@ -40,7 +40,8 @@
 
 // If you are embedding AsmJit library into your project (statically), undef
 // ASMJIT_API macro.
-// #define ASMJIT_API
+// Uncommented for pixslam - we want static linking.
+#define ASMJIT_API
 
 // ============================================================================
 // [AsmJit - Memory Management]

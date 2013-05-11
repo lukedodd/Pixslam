@@ -9,7 +9,7 @@ CMake_Minimum_Required(VERSION 2.8.7)
 # =============================================================================
 
 # Whether to build static library (default FALSE).
-# Set(ASMJIT_STATIC FALSE)
+Set(ASMJIT_STATIC TRUE) # modified for pixslam.
 
 # Whether to build samples (default FALSE).
 # Set(ASMJIT_BUILD_SAMPLES FALSE)
