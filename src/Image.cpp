@@ -5,7 +5,7 @@
 
 namespace pixslam{
 
-Image::Image(const std::string &path) : ownsData(true), w(0), h(0), data(nullptr){
+Image::Image(const std::string &path) : data(nullptr), w(0), h(0), ownsData(true){
     int n;
     // load image as greyscale
     unsigned char *datauc = stbi_load(path.c_str(), &w, &h, &n, 1);

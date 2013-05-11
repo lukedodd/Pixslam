@@ -89,11 +89,17 @@ public:
         if(ownsData && data)
             delete [] data; 
     }
+
+#ifdef WIN32
 private:
     // Forbid copy and assignment for now, allow move.
     // (Sadly "= delete" syntax does not work in MSVC2012)
     Image(const Image &);
     Image &operator=(const Image&);
+#elseif
+    Image(const Image &) = delete:
+    Image &operator=(const Image&) = delete;
+#endif
 };
 
 }
