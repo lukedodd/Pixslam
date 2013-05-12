@@ -156,6 +156,23 @@ With absolute indexing we can do things like flip an image upside down.
 
 ### Other Operators ####
 
+Pixslam also features comparison operations. They are the familiar inequalities `>` `<` `>=` `>=` and finally equality `==`. When given two areguments these operators return `1` if the comparison holds and `0` if it does not.
+
+Combined with multiplication we can use comparison operations zero out parts of an image below a certain threshold.
+
+```
+; threshold.psm
+; Zero out image wherever it is below 0.5
+((A)
+ (*
+    (< A 0.5) ; zero when A < 0.5, one otherwise
+    A
+ )
+)
+```
+
+TODO: Show thresholded Lenna image.
+
 Pixslam has inbuilt `min` and `max` functions which take a variable number of arguments. These can be used to implement [morphological image processing](http://www.cs.auckland.ac.nz/courses/compsci773s1c/lectures/ImageProcessing-html/topic4.htm)  operations. Below is code for _erosion_ of an image using a 3x3 neighbourhood. That is: for each pixel we replace it with the minimum value of that pixel and it's 8 neighbours.
 
 ```
@@ -189,26 +206,6 @@ TODO: Eroded Lenna image.
 You can _dilate_ the image by replacing the min in the above code with max.
 
 TODO: Dilated Lenna iamge.
-
-Pixslam also features comparison operations. They are the familiar inequalities `>` `<` `>=` `>=` and finally equality `==`. When given two areguments these operators return `1` if the comparison holds and `0` if it does not.
-
-Combined with multiplication we can use comparison operations zero out parts of an image below a certain threshold.
-
-```
-; threshold.psm
-; Zero out image wherever it is below 0.5
-((A)
- (*
-    (< A 0.5) ; zero when A < 0.5, one otherwise
-    A
- )
-)
-```
-
-TODO: Show thresholded Lenna image.
-
-
-* Comparison operations. Thresholding.
 
 ### Interesting Examples ###
 
