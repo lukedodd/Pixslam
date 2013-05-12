@@ -209,6 +209,8 @@ TODO: Dilated Lenna iamge.
 
 ### Interesting Examples ###
 
+#### Edges #####
+
 Chaining together results of pixslam programs can yield some nice results. Subtracting a blurred version of an image from the original leaves bland areas close to zero and edge regions positive or negative. So taking the absolute difference of an image with a blurred version of the original gives a simple edge detector!
 
 ```
@@ -223,17 +225,35 @@ Now run this on a box blurred Lena and the original image and you get some edges
 # Edge detection on the Lenna image.
 ../pixslam --logCommand absdiff.psm ../example_data/lena.png box_5x5_out_1.png lena_edge.png
 ```
+#### Metaballs #####
 
-TODO: show result.
+[Metaballs](http://en.wikipedia.org/wiki/Metaballs) were pretty cool in the 90s. We can recreate them in Pixslam. An input image is not needed - we use a dummy one only to specify a size. Everything is achieved by using the `i` and `j` variables.
 
+```
+; metaballs.psm
+; Draw some nice metaballs. See: http://en.wikipedia.org/wiki/Metaballs
+((A) ; input not used, just specifies size
+    ( +  
+        (/ 5000.0 (+ (* (- i 100) (- i 100)) (* (- j 200) (- j 200)) )) ; ball medium size at (200, 100)
+        (/ 7000.0 (+ (* (- i 300) (- i 300)) (* (- j 200) (- j 200)) )) ; ball large size at (300, 200)
+        (/ 5000.0 (+ (* (- i 400) (- i 400)) (* (- j 400) (- j 400)) )) ; ball medium size at (400, 400)
+    )
+)
+```
 
-* TODO: Getting creative: metaballs.
+TODO: Metaballs image.
 
-* TODO: Mention the game of life example - don't describe it just say have a look.
+And after some thresholding, and the edge technique described above we end up with this!
+
+TODO: Metaballs edge image.
+
+Have a look at the examples directory after bulding to see how that was done. Start by looking at `metaball_edge.png.sh` (or `.bat` if you're on windows).
 
 ### More Information ###
 
-The best resource for understanding Pixslam is the examples. A few of those are shown above, but build process runs many more of example Pixslam code. After you build Pixslam you should see an `examples` directory in your build directory. This will be filled with `.psm` Pixslam source files, generated images, and shell or batch files which show how Pixslam was run to generate each output.
+The best resource for understanding Pixslam is the examples. A few of those are shown above, but build process runs many more of example Pixslam code.
+
+After you build Pixslam you should see an `examples` directory in your build directory. This will be filled with `.psm` Pixslam source files, generated images, and shell or batch files which show how Pixslam was run to generate each output.
 
 Libraries
 ---------
