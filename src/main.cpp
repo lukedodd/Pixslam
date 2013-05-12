@@ -93,7 +93,7 @@ int main (int argc, char *argsRaw[])
     JitImageFunction cgFunction(code, logAsm);
 
     // Read in input images specified by arguments.
-    int padding = 5;
+    int padding = 16;
     std::vector<Image> inputImages;
     for(size_t i = 0; i < cgFunction.getNumArgs(); ++i){
         Image im(argv[2+i]);

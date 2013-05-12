@@ -69,6 +69,7 @@ All input images must be the same size, and the output image is the same size as
 The expression part of a pixslam function defines it's behaviour. It is basically a calculator with support for indexing images. An example should hopefully make this clear.
 
 ```
+; compose.psm
 ; Add two images together.
 ((A B)
      ( * 0.5 ; normalise back to [0,1]
@@ -89,18 +90,72 @@ If we run this example after building pixslam by issuing the following command i
 
 The output will be written to `out.png`. Below you can see the inputs and results (scaled down).
 
-![Add images example](example_data/lena.jpg "Adding two images: left and middle are two input images, right is the result.")
+* TODO: input and output image.
 
 ### Relative Indexing ####
 
-* Relative indexing. Box blur. Demonstrates that + processes lists too.
+Often in image processing to process a particular pixel we need to look at values of neighbouring pixels. Pixslam makes this use case easy by providing relative indexing. If we are currently processing pixel `(i,j)` of image `A` and `a` and `b` are numbers then the expression `(A a b)` returns the value of image `A` at pixel `(i + a, j +b)`. Note that Pixslam uses row, column lookup instead of x,y - this may seem unusual but is actually very common in image processing (see Matlab image processing, opencv, etc.)
 
-### Absolute Indexing ####
+A good example of this is a 3x3 normalized box filter. That is for every pixel in the image we return the mean of that pixel and it's 8 neighbouring values.
 
-* Absolute indexing. Flip.
+```
+; box_3x3.psm
+; Normalized 3x3 box filter.
+; That is: replace each pixel with the average value of the pixels in 3x3 neigbourhood 
+((A)
+    ( /
+        (
+            + 
+            (A -1 -1)
+            (A -1 0)
+            (A -1 1)
+            (A 0 -1)
+            (A 0 0)
+            (A 0 1)
+            (A 1 -1)
+            (A 1 0)
+            (A 1 1)
+        )
+        9
+    )
+)
+```
+
+The above example demonstrates relative indexing, the division operator, and the fact that numerical operations can accept more than two arguments (so `+` can be used to sum a list.)
+
+``` bash
+# Run from the examples directory to create a blurred version of the Lenna image.
+../pixslam box_3x3.psm ../example_data/lena.png box_3x3_out_1.png
+```
+
+* TODO: Input and output image.
+
+#### Image Borders
+
+Right now image borders are handled by padding all images with a hard coded (16 pixel) border of zeros. Proper border handling strategies are on the TODO list.
+
+### Absolute Indexing and Special Symbols ####
+
+Pixslam also provides absolute indexing. If `A` is an image the expression `(@A y x)` will yield the value of the image at pixel `(x,y)`. Pixslam also provides the special symbols `i` and `j` which are set to the current row and column of the image being processed respectively. The symbols `w` and `h` bound to the width and height of the input image.
+
+With absolute indexing we can do things like flip an image upside down.
+
+```
+; flip_vertical.psm
+; Flip image vertically.
+; Demos absolute indexing operator.
+((A) (@A (- height i) j))
+```
+
+```
+# Run from the example directory to create an upside down duck image.
+../pixslam --logCommand flip_vertical.psm ../example_data/duck.png flipped_duck.png
+```
+
+* Upside down duck image.
 
 ### Other Operators ####
-* More complex operators. Morphilogical operations.
+* More complex operators. Morphological operations.
 * Comparison operations. Thresholding.
 
 ### Interesting Examples ###

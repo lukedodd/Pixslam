@@ -79,14 +79,20 @@ add_custom_command(
 )
 
 add_custom_command(
-   OUTPUT subtract_out.png
-   COMMAND pixslam --logCommand subtract.psm metaballs_fancy_out.png box_5x5_out_2.png subtract_out.png
+   OUTPUT lena_edge.png
+   COMMAND pixslam --logCommand subtract.psm ../example_data/lena.png box_5x5_out_1.png lena_edge.png
+   DEPENDS pixslam subtract.psm box_5x5_out_2.png 
+)
+
+add_custom_command(
+   OUTPUT metaball_edge.png
+   COMMAND pixslam --logCommand subtract.psm metaballs_fancy_out.png box_5x5_out_2.png metaball_edge.png
    DEPENDS pixslam subtract.psm metaballs_fancy_out.png box_5x5_out_2.png 
 )
 
 add_custom_command(
    OUTPUT flipped_duck.png
-   COMMAND pixslam --logCommand flip_vertical.psm ../example_data/duck.png filpped_duck.png
+   COMMAND pixslam --logCommand flip_vertical.psm ../example_data/duck.png flipped_duck.png
    DEPENDS pixslam flip_vertical.psm 
 )
 
@@ -96,6 +102,6 @@ add_custom_command(
    DEPENDS pixslam threshold.psm 
 )
 
-add_custom_target(examples ALL DEPENDS copy_examples copy_example_data compose_out.png erode_3x3_out.png dilate_3x3_out.png erode_5x5_out.png dilate_5x5_out.png min_out.png metaballs_out.png metaballs_binary_out.png metaballs_fancy_out.png box_3x3_out_1.png box_3x3_out_2.png box_5x5_out_1.png box_5x5_out_2.png subtract_out.png flipped_duck.png threshold.png)
+add_custom_target(examples ALL DEPENDS copy_examples copy_example_data compose_out.png erode_3x3_out.png dilate_3x3_out.png erode_5x5_out.png dilate_5x5_out.png min_out.png metaballs_out.png metaballs_binary_out.png metaballs_fancy_out.png box_3x3_out_1.png box_3x3_out_2.png box_5x5_out_1.png box_5x5_out_2.png metaball_edge.png lena_edge.png flipped_duck.png threshold.png)
 
 add_subdirectory(game_of_life)
