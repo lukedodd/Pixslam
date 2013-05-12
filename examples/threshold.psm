@@ -1,0 +1,7 @@
+; Zero out image wherever it is below 0.5
+((A)
+ (*
+    (< A 0.5) ; zero when A < 0.5, one otherwise
+    A
+ )
+)

@@ -54,9 +54,17 @@ A reasonable number of input image formats are supported: jpeg, PNG and BMP. Col
 Language Description and Examples
 ---------------------------------
 
-Pixslam uses a lisp style s-expressions. If you have had any experience with these the language should be quite simple to learn.
+### The Basics ###
 
-Code for Pixslam must be a function definition. This consists of a list containing a list of arguments and then an expression which is evaluated for every pixel of the input images: `((Arg1 Arg2 ...) (Expression)`. All input images must be the same size, and the output image is the same size as the input image.
+Pixslam uses a lisp style [s-expressions](http://en.wikipedia.org/wiki/S-expression). If you have had any experience with these the language should be quite simple to learn.
+
+Code for Pixslam must be a function definition. This consists of a list containing a list of arguments and then an expression which is evaluated for every pixel of the input images: 
+
+```
+((Arg1 Arg2 ...) (Expression)
+```
+
+All input images must be the same size, and the output image is the same size as the input image.
 
 The expression part of a pixslam function defines it's behaviour. It is basically a calculator with support for indexing images. An example should hopefully make this clear.
 
@@ -71,19 +79,34 @@ The expression part of a pixslam function defines it's behaviour. It is basicall
 
 The main thing to note about this example is that it shows one method of indexing images: writing an input name an atom (taking no arguments) evaluates to the current pixel int hat image. Pixslam will evaluate the expression for every pixel in your input images and write the result into your output image.
 
+The comments of the above program hint at another fact: Pixslam represents pixels as floating point values (currently doubles) in the range [0,1]. When images are read in the [0,255] values are scaled down to this range, when images are written out the [0,1] are scaled back to [0,255].
+
 If we run this example after building pixslam by issuing the following command in the build directory:
 
 ```
 ./pixslam examples/compose.psm example_data/lena.png example_data/duck.png
 ```
 
-The output will be written to `out.png`. Below you can see the inputs and results.
+The output will be written to `out.png`. Below you can see the inputs and results (scaled down).
 
 ![Add images example](readme_images/img.jpg "Adding two images: left and middle are two input images, right is the result.")
 
+### Relative Indexing ####
 
-More Information
------------------
+* Relative indexing. Box blur. Demonstrates that + processes lists too.
 
-For now this project is documented by examples. Some of those are shown above. The build process runs lots of example Pixslam code. After you build Pixslam you should see an `examples` directory in your build directory. This will be filled with `.psm` Pixslam source files, generated images, and shell or batch files which show how Pixslam was run to generate each output.
+### Absolute Indexing ####
+
+* Absolute indexing. Flip.
+
+### Other Operators ####
+* More complex opeators. Morphilogical operations.
+* Comparison operations. Thresholding.
+
+### Interesting Examples ###
+* Getting creative: metaballs.
+
+### More Information ###
+
+The best resource for understanding Pixslam is the examples. A few of those are shown above, but build process runs many more of example Pixslam code. After you build Pixslam you should see an `examples` directory in your build directory. This will be filled with `.psm` Pixslam source files, generated images, and shell or batch files which show how Pixslam was run to generate each output.
 
