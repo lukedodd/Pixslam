@@ -110,3 +110,15 @@ The output will be written to `out.png`. Below you can see the inputs and result
 
 The best resource for understanding Pixslam is the examples. A few of those are shown above, but build process runs many more of example Pixslam code. After you build Pixslam you should see an `examples` directory in your build directory. This will be filled with `.psm` Pixslam source files, generated images, and shell or batch files which show how Pixslam was run to generate each output.
 
+Libraries
+---------
+
+The Pixslam project uses two libraries. They are both great so I want to spread the word.
+
+* [AsmJit](https://code.google.com/p/asmjit/) as a runtime assembler and compiler. This project would not exist whitout AsmJit.
+* The wonderful [stb_image](http://nothings.org/stb_image.c) for image reading/writing. Avoiding large/complex/annoying image reading let me get stuck into the interesting code much faster, and makes for a much easier build process.
+
+License
+-------
+
+This code is licensed under the very permissive zlib license.
