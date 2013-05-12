@@ -209,11 +209,27 @@ TODO: Dilated Lenna iamge.
 
 ### Interesting Examples ###
 
-* Show chaining things together: Lenna edges.
+Chaining together results of pixslam programs can yield some nice results. Subtracting a blurred version of an image from the original leaves bland areas close to zero and edge regions positive or negative. So taking the absolute difference of an image with a blurred version of the original gives a simple edge detector!
 
-* Getting creative: metaballs.
+```
+; absdiff.psm
+; Absolute difference.
+((A B) (max (- A B) (- B A)))
+```
 
-* Mention the game of life example - don't describe it just say have a look.
+Now run this on a box blurred Lena and the original image and you get some edges.
+
+```
+# Edge detection on the Lenna image.
+../pixslam --logCommand absdiff.psm ../example_data/lena.png box_5x5_out_1.png lena_edge.png
+```
+
+TODO: show result.
+
+
+* TODO: Getting creative: metaballs.
+
+* TODO: Mention the game of life example - don't describe it just say have a look.
 
 ### More Information ###
 
