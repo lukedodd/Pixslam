@@ -1,0 +1,2 @@
+; Absolute difference.
+((A B) (max (- A B) (- B A)))
