@@ -89,7 +89,7 @@ If we run this example after building pixslam by issuing the following command i
 
 The output will be written to `out.png`. Below you can see the inputs and results (scaled down).
 
-![Add images example](readme_images/img.jpg "Adding two images: left and middle are two input images, right is the result.")
+![Add images example](example_data/lena.jpg "Adding two images: left and middle are two input images, right is the result.")
 
 ### Relative Indexing ####
 
@@ -100,7 +100,7 @@ The output will be written to `out.png`. Below you can see the inputs and result
 * Absolute indexing. Flip.
 
 ### Other Operators ####
-* More complex opeators. Morphilogical operations.
+* More complex operators. Morphilogical operations.
 * Comparison operations. Thresholding.
 
 ### Interesting Examples ###
@@ -113,7 +113,7 @@ The best resource for understanding Pixslam is the examples. A few of those are 
 Libraries
 ---------
 
-The Pixslam project uses two libraries. They are both great so I want to spread the word.
+Pixslam uses two libraries. They are both great so I want to spread the word.
 
 * [AsmJit](https://code.google.com/p/asmjit/) as a runtime assembler and compiler. This project would not exist whitout AsmJit.
 * The wonderful [stb_image](http://nothings.org/stb_image.c) for image reading/writing. Avoiding large/complex/annoying image reading let me get stuck into the interesting code much faster, and makes for a much easier build process.
