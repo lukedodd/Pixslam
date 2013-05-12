@@ -7,7 +7,7 @@ Pixslam has three main features.
 
 * Pixslam is dedicated to image processing, pixslam is designed for elegantly expressing programs which operate pixel wise on images.
 * Pixslam features just in time compilation (JIT) to x86-64 code, this allows for rapid experimentation with image processing which would otherwise be impossibly slow in an interpreted language.
-* Pixslam is lightweight and has no complex build dependencies. So it could be integrated into other applications easily.
+* Pixslam is lightweight and has no complex build dependencies. It could be integrated into other applications easily.
 
 Right now Pixslam is very much a toy. While more features are planned it is important to note this project was made for my own entertainment rather than to be _useful_.
 
@@ -94,7 +94,7 @@ The output will be written to `out.png`. Below you can see the inputs and result
 
 ### Relative Indexing ####
 
-Often in image processing to process a particular pixel we need to look at values of neighbouring pixels. Pixslam makes this use case easy by providing relative indexing. If we are currently processing pixel `(i,j)` of image `A` and `a` and `b` are numbers then the expression `(A a b)` returns the value of image `A` at pixel `(i + a, j +b)`. Note that Pixslam uses row, column lookup instead of x,y - this may seem unusual but is actually very common in image processing (see Matlab image processing, opencv, etc.)
+Often in image processing to process a particular pixel we need to look at values of neighbouring pixels. Pixslam makes this use case easy by providing relative indexing. If we are currently processing pixel `(i,j)` of image `A` and `a` and `b` are numbers then the expression `(A a b)` returns the value of image `A` at pixel `(i + a, j +b)`. Note that Pixslam uses row, column lookup -- this may seem unusual but is actually very common in image processing (see Matlab image processing, opencv, etc.)
 
 A good example of this is a 3x3 normalized box filter. That is for every pixel in the image we return the mean of that pixel and it's 8 neighbouring values.
 
@@ -128,7 +128,7 @@ The above example demonstrates relative indexing, the division operator, and the
 ../pixslam box_3x3.psm ../example_data/lena.png box_3x3_out_1.png
 ```
 
-* TODO: Input and output image.
+* TODO: Input and output image side by side.
 
 #### Image Borders
 
@@ -136,7 +136,7 @@ Right now image borders are handled by padding all images with a hard coded (16 
 
 ### Absolute Indexing and Special Symbols ####
 
-Pixslam also provides absolute indexing. If `A` is an image the expression `(@A y x)` will yield the value of the image at pixel `(x,y)`. Pixslam also provides the special symbols `i` and `j` which are set to the current row and column of the image being processed respectively. The symbols `w` and `h` bound to the width and height of the input image.
+Pixslam also provides absolute indexing. If `A` is an image the expression `(@A y x)` will yield the value of the image at pixel `(x,y)`. Pixslam also provides the special symbols `i` and `j` which are set to the current row and column of the image being processed respectively. The symbols `width` and `height` bound to the width and height of the input image.
 
 With absolute indexing we can do things like flip an image upside down.
 
@@ -147,19 +147,76 @@ With absolute indexing we can do things like flip an image upside down.
 ((A) (@A (- height i) j))
 ```
 
-```
+```bash
 # Run from the example directory to create an upside down duck image.
-../pixslam --logCommand flip_vertical.psm ../example_data/duck.png flipped_duck.png
+../pixslam flip_vertical.psm ../example_data/duck.png flipped_duck.png
 ```
 
 * Upside down duck image.
 
 ### Other Operators ####
-* More complex operators. Morphological operations.
+
+Pixslam has inbuilt `min` and `max` functions which take a variable number of arguments. These can be used to implement [morphological image processing](http://www.cs.auckland.ac.nz/courses/compsci773s1c/lectures/ImageProcessing-html/topic4.htm)  operations. Below is code for _erosion_ of an image using a 3x3 neighbourhood. That is: for each pixel we replace it with the minimum value of that pixel and it's 8 neighbours.
+
+```
+; erode_3x3.psm
+; Erode an image with a 3x3 kernel.
+; That is: each pixel takes the value of the minimum pixel in a 3x3 neighbourhood.
+((A)
+    (
+        min 
+        (A -1 -1)
+        (A -1 0)
+        (A -1 1)
+        (A 0 -1)
+        (A 0 0)
+        (A 0 1)
+        (A 1 -1)
+        (A 1 0)
+        (A 1 1)
+    )
+)
+
+```
+
+```bash
+# Run from the example directory to produce an eroded Lenna image
+../pixslam dilate_3x3.psm ../example_data/lena.png dilate_3x3_out.png 
+```
+
+TODO: Eroded Lenna image.
+
+You can _dilate_ the image by replacing the min in the above code with max.
+
+TODO: Dilated Lenna iamge.
+
+Pixslam also features comparison operations. They are the familiar inequalities `>` `<` `>=` `>=` and finally equality `==`. When given two areguments these operators return `1` if the comparison holds and `0` if it does not.
+
+Combined with multiplication we can use comparison operations zero out parts of an image below a certain threshold.
+
+```
+; threshold.psm
+; Zero out image wherever it is below 0.5
+((A)
+ (*
+    (< A 0.5) ; zero when A < 0.5, one otherwise
+    A
+ )
+)
+```
+
+TODO: Show thresholded Lenna image.
+
+
 * Comparison operations. Thresholding.
 
 ### Interesting Examples ###
+
+* Show chaining things together: Lenna edges.
+
 * Getting creative: metaballs.
+
+* Mention the game of life example - don't describe it just say have a look.
 
 ### More Information ###
 
@@ -171,7 +228,7 @@ Libraries
 Pixslam uses two libraries. They are both great so I want to spread the word.
 
 * [AsmJit](https://code.google.com/p/asmjit/) as a runtime assembler and compiler. This project would not exist whitout AsmJit.
-* The wonderful [stb_image](http://nothings.org/stb_image.c) for image reading/writing. Avoiding large/complex/annoying image reading let me get stuck into the interesting code much faster, and makes for a much easier build process.
+* The wonderful [stb_image](http://nothings.org/stb_image.c) for image reading/writing. Avoiding large/complex/annoying image reading libraries let me get stuck into the interesting code much faster, and makes for a much easier build process.
 
 License
 -------
