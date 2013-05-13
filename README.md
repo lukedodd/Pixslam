@@ -5,18 +5,18 @@ Pixslam is a toy language for image processing.
 
 Pixslam has three main features. 
 
-* Pixslam is dedicated to image processing, pixslam is designed for elegantly expressing programs which operate pixel wise on images.
+* Pixslam is dedicated to image processing, it is designed for elegantly expressing programs which operate pixel wise on images.
 * Pixslam features just in time compilation (JIT) to x86-64 code, this allows for rapid experimentation with image processing which would otherwise be impossibly slow in an interpreted language.
 * Pixslam is lightweight and has no complex build dependencies. It could be integrated into other applications easily.
 
 Right now Pixslam is very much a toy. While more features are planned it is important to note this project was made for my own entertainment rather than to be _useful_.
 
-TODO: Link to blog post for more in depth description.
+TODO: Link to blog post for more in depth description
 
 Building Pixslam
 ----------------
 
-Standard out of source CMake build. Works on Linux (probably other x86-64 unix OSs too) with recent GCC versions and Windows with Visual Studio 2012. You must build on a x86-64 (otherwise known as amd64) platform!
+Pixslam uses a standard CMake build. Works on Linux (probably other x86-64 unix OSs too) with recent GCC versions and Windows with Visual Studio 2012. You must build on a x86-64 (otherwise known as amd64) platform!
 
 For Linux builds. Clone the Pixslam repository to somewhere and then do the following:
 
@@ -29,10 +29,12 @@ make
 
 For Windows builds:
 
- * Clone Pixslam repoistory
+ * Clone Pixslam repository
  * Fire up cmake gui (install cmake first!) and point it to the Pixslam repo and whatever build directory you want.
  * Click configure, select visual studio 11 Win64 project, and then generate.
  * Go to the build directory, open up the pixslam solution file and build all.
+
+ In both cases it is important to build in a *separate directory* to the source.
 
 Running Pixslam
 --------------- 
@@ -78,9 +80,9 @@ The expression part of a pixslam function defines it's behaviour. It is basicall
 )
 ```
 
-The main thing to note about this example is that it shows one method of indexing images: writing an input name an atom (taking no arguments) evaluates to the current pixel int hat image. Pixslam will evaluate the expression for every pixel in your input images and write the result into your output image.
+The main thing to note about this example is that it shows one method of indexing images: writing an input name as an atom (taking no arguments) evaluates to the current pixel int hat image. Pixslam will evaluate the expression for every pixel in your input images and write the result into your output image.
 
-The comments of the above program hint at another fact: Pixslam represents pixels as floating point values (currently doubles) in the range [0,1]. When images are read in the [0,255] values are scaled down to this range, when images are written out the [0,1] are scaled back to [0,255].
+The comments of the above program hints at another fact: Pixslam represents pixels as floating point values (currently doubles) in the range [0,1]. When images are read in the [0,255] values are scaled down to this range, when images are written out the [0,1] range is values are scaled back to [0,255].
 
 If we run this example after building pixslam by issuing the following command in the build directory:
 
@@ -88,15 +90,15 @@ If we run this example after building pixslam by issuing the following command i
 ./pixslam examples/compose.psm example_data/lena.png example_data/duck.png
 ```
 
-The output will be written to `out.png`. Below you can see the inputs and results (scaled down, top left `lena.png`, top right `duck.png` and the result.
+The output will be written to `out.png`. Below you can see the inputs and results (top left `lena.png`, top right `duck.png` and the result.)
 
 ![Output from compose.psm](raw/master/readme_images/compose.png "Output from compose.psm.") 
 
 ### Relative Indexing ####
 
-Often in image processing to process a particular pixel we need to look at values of neighbouring pixels. Pixslam makes this use case easy by providing relative indexing. If we are currently processing pixel `(i,j)` of image `A` and `a` and `b` are numbers then the expression `(A a b)` returns the value of image `A` at pixel `(i + a, j +b)`. Note that Pixslam uses row, column lookup -- this may seem unusual but is actually very common in image processing (see Matlab image processing, opencv, etc.)
+Often when process a particular pixel we will want to look at values of neighbouring pixels. Pixslam makes this easy by providing relative indexing. If we are currently processing pixel `(i,j)` of image `A` and `a` and `b` are numbers, then the expression `(A a b)` returns the value of image `A` at pixel `(i + a, j +b)`. Note that Pixslam uses row, column lookup -- this may seem unusual but is actually very common in image processing (see Matlab, OpenCV, etc.)
 
-A good example of this is a 3x3 normalized box filter. That is for every pixel in the image we return the mean of that pixel and it's 8 neighbouring values.
+A good example of this is a 3x3 normalized box filter. That is for every pixel in the image we return the mean of that pixel and it's 8 neighbouring values. This is the simplest way to _blur_ an image.
 
 ```
 ; box_3x3.psm
@@ -121,12 +123,14 @@ A good example of this is a 3x3 normalized box filter. That is for every pixel i
 )
 ```
 
-The above example demonstrates relative indexing, the division operator, and the fact that numerical operations can accept more than two arguments (so `+` can be used to sum a list.)
+The above example demonstrates relative indexing, the division operator, and the fact that numerical operations can accept more than two arguments (e.g. `+` can be used to sum a list.)
 
 ``` bash
 # Run from the examples directory to create a blurred version of the Lenna image.
 ../pixslam box_3x3.psm ../example_data/lena.png box_3x3_out_1.png
 ```
+
+Input and output of the above:
 
 ![Output from box_3x3.psm](raw/master/readme_images/lena_blur.png "Output from box_3x3.psm.") 
 
@@ -136,7 +140,7 @@ Right now image borders are handled by padding all images with a hard coded (16 
 
 ### Absolute Indexing and Special Symbols ####
 
-Pixslam also provides absolute indexing. If `A` is an image the expression `(@A y x)` will yield the value of the image at pixel `(x,y)`. Pixslam also provides the special symbols `i` and `j` which are set to the current row and column of the image being processed respectively. The symbols `width` and `height` bound to the width and height of the input image.
+Pixslam also provides absolute indexing. If `A` is an image the expression `(@A y x)` will yield the value of the image at pixel `(x,y)`. Pixslam provides the special symbols `i` and `j` which are set to the current row and column of the image being processed respectively. The symbols `width` and `height` set to the width and height of the input image.
 
 With absolute indexing we can do things like flip an image upside down.
 
@@ -204,7 +208,7 @@ Pixslam has inbuilt `min` and `max` functions which take a variable number of ar
 
 ![Output from erode.psm](raw/master/readme_images/erode_3x3_out.png "Output from erode_3x3.psm.") 
 
-You can _dilate_ the image by replacing the min in the above code with max.
+You can _dilate_ the image by replacing the `min` in the above code with `max`.
 
 ![Output from dilate.psm](raw/master/readme_images/dilate_3x3_out.png "Output from dilate_3x3.psm.") 
 
@@ -226,8 +230,8 @@ Now run this on a box blurred Lena and the original image and you get some edges
 # Edge detection on the Lenna image.
 ../pixslam --logCommand absdiff.psm ../example_data/lena.png box_5x5_out_1.png lena_edge.png
 
-![Simple edge detection](raw/master/readme_images/lena_edge.png "Simple edge detection")
 ```
+![Simple edge detection](raw/master/readme_images/lena_edge.png "Simple edge detection")
 #### Metaballs #####
 
 [Metaballs](http://en.wikipedia.org/wiki/Metaballs) were pretty cool in the 90s. We can recreate them in Pixslam. An input image is not really needed - we only use a dummy one only to specify the output size. Everything is achieved by using the `i` and `j` variables.
@@ -259,9 +263,9 @@ Have a look at the examples directory after bulding to see how that was done. St
 
 ### More Information ###
 
-The best resource for understanding Pixslam is the examples. A few of those are shown above, but build process runs many more of example Pixslam code.
+The best resource for understanding Pixslam is the examples. A few of those are shown above, but the build process runs many more of example Pixslam code.
 
-After you build Pixslam you should see an `examples` directory in your build directory. This will be filled with `.psm` Pixslam source files, generated images, and shell or batch files which show how Pixslam was run to generate each output.
+After you build Pixslam you should see an `examples` directory in your build directory. This will be filled with `.psm` Pixslam source files, generated `png` images, and shell or batch files which show how Pixslam was run to generate each output.
 
 Libraries
 ---------
