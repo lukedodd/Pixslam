@@ -202,11 +202,11 @@ Pixslam has inbuilt `min` and `max` functions which take a variable number of ar
 ../pixslam erode_3x3.psm ../example_data/lena.png erode_3x3_out.png 
 ```
 
-![Output from erode.psm](raw/master/readme_images/erode_3x3.png "Output from erode_3x3.psm.") 
+![Output from erode.psm](raw/master/readme_images/erode_3x3_out.png "Output from erode_3x3.psm.") 
 
 You can _dilate_ the image by replacing the min in the above code with max.
 
-![Output from dilate.psm](raw/master/readme_images/dilate_3x3.png "Output from dilate_3x3.psm.") 
+![Output from dilate.psm](raw/master/readme_images/dilate_3x3_out.png "Output from dilate_3x3.psm.") 
 
 ### Interesting Examples ###
 
@@ -254,8 +254,6 @@ Now run this on a box blurred Lena and the original image and you get some edges
 And after some thresholding, and the edge technique described above we end up with this:
 
 ![Metaball edges example](raw/master/readme_images/metaball_edges.png "Metaball edges example")
-
-TODO: Metaballs edge image.
 
 Have a look at the examples directory after bulding to see how that was done. Start by looking at `metaball_edge.png.sh` (or `.bat` if you're on windows).
 
