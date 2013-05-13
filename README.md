@@ -128,7 +128,7 @@ The above example demonstrates relative indexing, the division operator, and the
 ../pixslam box_3x3.psm ../example_data/lena.png box_3x3_out_1.png
 ```
 
-![Output from box_3x3.psm](raw/master/readme_images/lenna_blur.png "Output from box_3x3.psm.") 
+![Output from box_3x3.psm](raw/master/readme_images/lena_blur.png "Output from box_3x3.psm.") 
 
 #### Image Borders
 
@@ -151,8 +151,7 @@ With absolute indexing we can do things like flip an image upside down.
 # Run from the example directory to create an upside down duck image.
 ../pixslam flip_vertical.psm ../example_data/duck.png flipped_duck.png
 ```
-
-* Upside down duck image.
+![Output from flip_vertical.psm](raw/master/readme_images/flipped_duck.png "Output from flip_vertical.psm.") 
 
 ### Other Operators ####
 
@@ -173,7 +172,7 @@ Combined with multiplication we can use comparison operations zero out parts of 
 )
 ```
 
-TODO: Show thresholded Lenna image.
+![Output from threshold.psm](raw/master/readme_images/threshold.png "Output from threshold.psm.") 
 
 Pixslam has inbuilt `min` and `max` functions which take a variable number of arguments. These can be used to implement [morphological image processing](http://www.cs.auckland.ac.nz/courses/compsci773s1c/lectures/ImageProcessing-html/topic4.htm)  operations. Below is code for _erosion_ of an image using a 3x3 neighbourhood. That is: for each pixel we replace it with the minimum value of that pixel and it's 8 neighbours.
 
