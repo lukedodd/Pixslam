@@ -199,14 +199,14 @@ Pixslam has inbuilt `min` and `max` functions which take a variable number of ar
 
 ```bash
 # Run from the example directory to produce an eroded Lenna image
-../pixslam dilate_3x3.psm ../example_data/lena.png dilate_3x3_out.png 
+../pixslam erode_3x3.psm ../example_data/lena.png erode_3x3_out.png 
 ```
 
-TODO: Eroded Lenna image.
+![Output from erode.psm](raw/master/readme_images/threshold.png "Output from erode_3x3.psm.") 
 
 You can _dilate_ the image by replacing the min in the above code with max.
 
-TODO: Dilated Lenna iamge.
+![Output from dilate.psm](raw/master/readme_images/dilate.png "Output from dilate_3x3.psm.") 
 
 ### Interesting Examples ###
 
