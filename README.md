@@ -202,11 +202,11 @@ Pixslam has inbuilt `min` and `max` functions which take a variable number of ar
 ../pixslam erode_3x3.psm ../example_data/lena.png erode_3x3_out.png 
 ```
 
-![Output from erode.psm](raw/master/readme_images/threshold.png "Output from erode_3x3.psm.") 
+![Output from erode.psm](raw/master/readme_images/erode_3x3.png "Output from erode_3x3.psm.") 
 
 You can _dilate_ the image by replacing the min in the above code with max.
 
-![Output from dilate.psm](raw/master/readme_images/dilate.png "Output from dilate_3x3.psm.") 
+![Output from dilate.psm](raw/master/readme_images/dilate_3x3.png "Output from dilate_3x3.psm.") 
 
 ### Interesting Examples ###
 
@@ -225,6 +225,8 @@ Now run this on a box blurred Lena and the original image and you get some edges
 ```
 # Edge detection on the Lenna image.
 ../pixslam --logCommand absdiff.psm ../example_data/lena.png box_5x5_out_1.png lena_edge.png
+
+![Simple edge detection](raw/master/readme_images/lena_edge.png "Simple edge detection")
 ```
 #### Metaballs #####
 
@@ -242,9 +244,16 @@ Now run this on a box blurred Lena and the original image and you get some edges
 )
 ```
 
-TODO: Metaballs image.
+```
+# Generate Metaballs image. Input image only used to specify size.
+../pixslam metaballs.psm ../example_data/lena.png metaballs_out.png
+```
 
-And after some thresholding, and the edge technique described above we end up with this!
+![Metaballs example](raw/master/readme_images/metaballs_out.png "Metballs example")
+
+And after some thresholding, and the edge technique described above we end up with this:
+
+![Metaball edges example](raw/master/readme_images/metaball_edges.png "Metaball edges example")
 
 TODO: Metaballs edge image.
 
