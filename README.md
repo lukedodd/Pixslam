@@ -61,7 +61,7 @@ Pixslam uses a lisp style [s-expressions](http://en.wikipedia.org/wiki/S-express
 Code for Pixslam must be a function definition. This consists of a list containing a list of arguments and then an expression which is evaluated for every pixel of the input images: 
 
 ```
-((Arg1 Arg2 ...) (Expression)
+((Arg1 Arg2 ...) (Expression))
 ```
 
 All input images must be the same size, and the output image is the same size as the input image.
@@ -88,9 +88,9 @@ If we run this example after building pixslam by issuing the following command i
 ./pixslam examples/compose.psm example_data/lena.png example_data/duck.png
 ```
 
-The output will be written to `out.png`. Below you can see the inputs and results (scaled down).
+The output will be written to `out.png`. Below you can see the inputs and results (scaled down, top left `lena.png`, top right `duck.png` and the result.
 
-* TODO: input and output image.
+[Output from compose.psm](readme_imagse/compose.png "Output from compose.psm.") 
 
 ### Relative Indexing ####
 
@@ -156,7 +156,9 @@ With absolute indexing we can do things like flip an image upside down.
 
 ### Other Operators ####
 
-Pixslam also features comparison operations. They are the familiar inequalities `>` `<` `>=` `>=` and finally equality `==`. When given two areguments these operators return `1` if the comparison holds and `0` if it does not.
+#### Comparasons #####
+
+Pixslam also features comparison operations. They are the familiar inequalities `>` `<` `>=` `>=` and also equals `==` and not equals `!=`. When given two areguments these operators return `1` if the comparison holds and `0` if it does not.
 
 Combined with multiplication we can use comparison operations zero out parts of an image below a certain threshold.
 
@@ -227,7 +229,7 @@ Now run this on a box blurred Lena and the original image and you get some edges
 ```
 #### Metaballs #####
 
-[Metaballs](http://en.wikipedia.org/wiki/Metaballs) were pretty cool in the 90s. We can recreate them in Pixslam. An input image is not needed - we use a dummy one only to specify a size. Everything is achieved by using the `i` and `j` variables.
+[Metaballs](http://en.wikipedia.org/wiki/Metaballs) were pretty cool in the 90s. We can recreate them in Pixslam. An input image is not really needed - we only use a dummy one only to specify the output size. Everything is achieved by using the `i` and `j` variables.
 
 ```
 ; metaballs.psm
@@ -266,4 +268,4 @@ Pixslam uses two libraries. They are both great so I want to spread the word.
 License
 -------
 
-This code is licensed under the very permissive zlib license.
+This code is licensed under the zlib license.
