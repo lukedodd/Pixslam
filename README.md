@@ -90,7 +90,7 @@ If we run this example after building pixslam by issuing the following command i
 
 The output will be written to `out.png`. Below you can see the inputs and results (scaled down, top left `lena.png`, top right `duck.png` and the result.
 
-[Output from compose.psm](readme_imagse/compose.png "Output from compose.psm.") 
+![Output from compose.psm](readme_images/compose.png "Output from compose.psm.") 
 
 ### Relative Indexing ####
 
