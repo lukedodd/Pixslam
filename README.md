@@ -128,7 +128,7 @@ The above example demonstrates relative indexing, the division operator, and the
 ../pixslam box_3x3.psm ../example_data/lena.png box_3x3_out_1.png
 ```
 
-* TODO: Input and output image side by side.
+![Output from box_3x3.psm](raw/master/readme_images/lenna_blur.png "Output from box_3x3.psm.") 
 
 #### Image Borders
 
