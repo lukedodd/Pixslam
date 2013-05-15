@@ -36,6 +36,76 @@ JitImageFunction::JitImageFunction(const Cell &cell, bool stdOutLogging /* = fal
     generatedFunction = generate(code);
 }
 
+JitImageFunction::FuncPtrType JitImageFunction::generate(const Cell &c){
+    using namespace AsmJit;
+    compiler.newFunc(AsmJit::kX86FuncConvDefault, 
+            AsmJit::FuncBuilder5<void, Arguments, size_t, size_t, size_t, double *>());
+
+
+    GpVar pargv = compiler.getGpArg(0);
+    for(size_t i = 0; i < argNameToIndex.size(); ++i){
+        argv.push_back(compiler.newGpVar());
+        compiler.mov(argv.back(), ptr(pargv, i*sizeof(double)));
+    }
+
+    zero = compiler.newXmmVar();
+    one = compiler.newXmmVar();
+    SetXmmVar(compiler, zero, 0.0);
+    SetXmmVar(compiler, one, 1.0);
+
+    w = compiler.getGpArg(1);
+    h = compiler.getGpArg(2);
+    stride = compiler.getGpArg(3);
+    out = compiler.getGpArg(4);
+
+    wd = compiler.newXmmVar();
+    hd = compiler.newXmmVar();
+    compiler.cvtsi2sd(wd, w);
+    compiler.cvtsi2sd(hd, h);
+    symbols["w"] = wd;
+    symbols["h"] = hd;
+
+
+    // Perpare loop vars
+    n = compiler.newGpVar();
+    compiler.mov(n, w);
+    compiler.imul(n, h);
+    currentIndex = compiler.newGpVar();
+    compiler.mov(currentIndex, imm(0));
+
+    currentI = compiler.newGpVar();
+    currentJ = compiler.newGpVar();
+    compiler.mov(currentI, imm(0));
+    compiler.mov(currentJ, imm(0));
+
+    // for i = 0..h
+    // for j = 0..w
+    Label startLoop(compiler.newLabel());
+    compiler.bind(startLoop);
+    {
+        compiler.mov(currentIndex, currentI);
+        compiler.imul(currentIndex, stride);
+        compiler.add(currentIndex, currentJ);
+        // im(i,j) = f(x)
+        AsmJit::XmmVar retVar = eval(c);
+        compiler.movq(ptr(out, currentIndex, kScale8Times), retVar);
+
+    }
+    compiler.add(currentJ, imm(1));
+    compiler.cmp(currentJ, w);
+    compiler.jne(startLoop);
+    compiler.mov(currentJ, imm(0));
+    compiler.add(currentI, imm(1));
+    compiler.cmp(currentI, h);
+    compiler.jne(startLoop);
+
+
+    compiler.endFunc();
+    return reinterpret_cast<FuncPtrType>(compiler.make());
+}
+
+
+
 void JitImageFunction::operator()(const std::vector<Image> &images, Image &out) const {
     if(images.empty())
         throw std::runtime_error("must have at least one input image.");
