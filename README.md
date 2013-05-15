@@ -219,16 +219,16 @@ You can _dilate_ the image by replacing the `min` in the above code with `max`.
 Chaining together results of pixslam programs can yield some nice results. Subtracting a blurred version of an image from the original leaves bland areas close to zero and edge regions positive or negative. So taking the absolute difference of an image with a blurred version of the original gives a simple edge detector!
 
 ```
-; absdiff.psm
-; Absolute difference.
-((A B) (max (- A B) (- B A)))
+; double_absdiff.psm
+; Double absolute difference.
+((A B) (* 2 (max (- A B) (- B A))))
 ```
 
 Now run this on a box blurred Lena and the original image and you get some edges.
 
 ```
 # Edge detection on the Lenna image.
-../pixslam --logCommand absdiff.psm ../example_data/lena.png box_5x5_out_1.png lena_edge.png
+../pixslam --logCommand double_absdiff.psm ../example_data/lena.png box_5x5_out_1.png lena_edge.png
 
 ```
 ![Simple edge detection](raw/master/readme_images/lena_edge.png "Simple edge detection")

@@ -80,13 +80,13 @@ add_custom_command(
 
 add_custom_command(
    OUTPUT lena_edge.png
-   COMMAND pixslam --logCommand absdiff.psm ../example_data/lena.png box_5x5_out_1.png lena_edge.png
+   COMMAND pixslam --logCommand double_absdiff.psm ../example_data/lena.png box_5x5_out_1.png lena_edge.png
    DEPENDS pixslam absdiff.psm box_5x5_out_2.png 
 )
 
 add_custom_command(
    OUTPUT metaball_edges.png
-   COMMAND pixslam --logCommand absdiff.psm metaballs_fancy_out.png box_5x5_out_2.png metaball_edges.png
+   COMMAND pixslam --logCommand double_absdiff.psm metaballs_fancy_out.png box_5x5_out_2.png metaball_edges.png
    DEPENDS pixslam absdiff.psm metaballs_fancy_out.png box_5x5_out_2.png 
 )
 
