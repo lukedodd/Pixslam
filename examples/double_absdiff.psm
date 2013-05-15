@@ -1,0 +1,2 @@
+; Double absolute difference.
+((A B) (* 2 (max (- A B) (- B A))))

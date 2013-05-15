@@ -220,7 +220,7 @@ Chaining together results of pixslam programs can yield some nice results. Subtr
 
 ```
 ; double_absdiff.psm
-; Double absolute difference.
+; Double absolute difference (double because otherwise edges are quite dark.)
 ((A B) (* 2 (max (- A B) (- B A))))
 ```
 
