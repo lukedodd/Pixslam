@@ -1,5 +1,5 @@
 ; Normalized 3x3 box filter.
-; That is: replace each pixel with the average value of the pixels in 3x3 neigbourhood 
+; That is: replace each pixel with the average value of the pixels in 3x3 neighbourhood 
 ((A)
     ( /
         (
