@@ -39,15 +39,16 @@ JitImageFunction::JitImageFunction(const Cell &cell, bool stdOutLogging /* = fal
 JitImageFunction::FuncPtrType JitImageFunction::generate(const Cell &c){
     using namespace AsmJit;
     compiler.newFunc(AsmJit::kX86FuncConvDefault, 
-            AsmJit::FuncBuilder5<void, Arguments, size_t, size_t, size_t, double *>());
+                     AsmJit::FuncBuilder5<void, Arguments, size_t, size_t, size_t, double *>());
 
-
+    // Bind input array of image pointers to AsmJit vars.
     GpVar pargv = compiler.getGpArg(0);
     for(size_t i = 0; i < argNameToIndex.size(); ++i){
         argv.push_back(compiler.newGpVar());
         compiler.mov(argv.back(), ptr(pargv, i*sizeof(double)));
     }
 
+    // Setup some useful constants.
     zero = compiler.newXmmVar();
     one = compiler.newXmmVar();
     SetXmmVar(compiler, zero, 0.0);
@@ -58,13 +59,13 @@ JitImageFunction::FuncPtrType JitImageFunction::generate(const Cell &c){
     stride = compiler.getGpArg(3);
     out = compiler.getGpArg(4);
 
+    // Convert above into doubles so they can be bound to symbols.
     wd = compiler.newXmmVar();
     hd = compiler.newXmmVar();
     compiler.cvtsi2sd(wd, w);
     compiler.cvtsi2sd(hd, h);
     symbols["w"] = wd;
     symbols["h"] = hd;
-
 
     // Perpare loop vars
     n = compiler.newGpVar();
