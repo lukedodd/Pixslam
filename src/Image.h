@@ -96,7 +96,7 @@ private:
     // (Sadly "= delete" syntax does not work in MSVC2012)
     Image(const Image &);
     Image &operator=(const Image&);
-#elseif
+#else
     Image(const Image &) = delete:
     Image &operator=(const Image&) = delete;
 #endif
