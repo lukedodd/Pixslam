@@ -1,7 +1,7 @@
 Pixslam
 ======= 
 
-Pixslam is a toy language for image processing.
+Pixslam is a toy programming language for image processing.
 
 Pixslam has three main features. 
 
