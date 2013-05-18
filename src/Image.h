@@ -97,7 +97,7 @@ private:
     Image(const Image &);
     Image &operator=(const Image&);
 #else
-    Image(const Image &) = delete:
+    Image(const Image &) = delete;
     Image &operator=(const Image&) = delete;
 #endif
 };
