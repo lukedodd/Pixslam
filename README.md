@@ -11,8 +11,6 @@ Pixslam has three main features.
 
 Right now Pixslam is very much a toy. While more features are planned it is important to note this project was made for my own entertainment rather than to be _useful_.
 
-TODO: Link to blog post for more in depth description
-
 Building Pixslam
 ----------------
 
@@ -62,7 +60,7 @@ Pixslam uses a lisp style [s-expressions](http://en.wikipedia.org/wiki/S-express
 
 Code for Pixslam must be a function definition. This consists of a list containing a list of arguments and then an expression which is evaluated for every pixel of the input images: 
 
-```
+``` lisp
 ((Arg1 Arg2 ...) (Expression))
 ```
 
@@ -70,7 +68,7 @@ All input images must be the same size, and the output image is the same size as
 
 The expression part of a pixslam function defines it's behaviour. It is basically a calculator with support for indexing images. An example should hopefully make this clear.
 
-```
+``` lisp
 ; compose.psm
 ; Add two images together.
 ((A B)
@@ -92,7 +90,7 @@ If we run this example after building pixslam by issuing the following command i
 
 The output will be written to `out.png`. Below you can see the inputs and results (top left `lena.png`, top right `duck.png` and the result.)
 
-![Output from compose.psm](raw/master/readme_images/compose.png "Output from compose.psm.") 
+![Output from compose.psm](readme_images/compose.png "Output from compose.psm.") 
 
 ### Relative Indexing ####
 
@@ -100,7 +98,7 @@ Often when process a particular pixel we will want to look at values of neighbou
 
 A good example of this is a 3x3 normalized box filter. That is for every pixel in the image we return the mean of that pixel and it's 8 neighbouring values. This is the simplest way to _blur_ an image.
 
-```
+``` lisp
 ; box_3x3.psm
 ; Normalized 3x3 box filter.
 ; That is: replace each pixel with the average value of the pixels in 3x3 neigbourhood 
@@ -132,7 +130,7 @@ The above example demonstrates relative indexing, the division operator, and the
 
 Input and output of the above:
 
-![Output from box_3x3.psm](raw/master/readme_images/lena_blur.png "Output from box_3x3.psm.") 
+![Output from box_3x3.psm](readme_images/lena_blur.png "Output from box_3x3.psm.") 
 
 #### Image Borders
 
@@ -144,7 +142,7 @@ Pixslam also provides absolute indexing. If `A` is an image the expression `(@A 
 
 With absolute indexing we can do things like flip an image upside down.
 
-```
+``` lisp
 ; flip_vertical.psm
 ; Flip image vertically.
 ; Demos absolute indexing operator.
@@ -155,7 +153,7 @@ With absolute indexing we can do things like flip an image upside down.
 # Run from the example directory to create an upside down duck image.
 ../pixslam flip_vertical.psm ../example_data/duck.png flipped_duck.png
 ```
-![Output from flip_vertical.psm](raw/master/readme_images/flipped_duck.png "Output from flip_vertical.psm.") 
+![Output from flip_vertical.psm](readme_images/flipped_duck.png "Output from flip_vertical.psm.") 
 
 ### Other Operators ####
 
@@ -165,7 +163,7 @@ Pixslam also features comparison operations. They are the familiar inequalities 
 
 Combined with multiplication we can use comparison operations zero out parts of an image below a certain threshold.
 
-```
+``` lisp
 ; threshold.psm
 ; Zero out image wherever it is below 0.5
 ((A)
@@ -176,11 +174,11 @@ Combined with multiplication we can use comparison operations zero out parts of 
 )
 ```
 
-![Output from threshold.psm](raw/master/readme_images/threshold.png "Output from threshold.psm.") 
+![Output from threshold.psm](readme_images/threshold.png "Output from threshold.psm.") 
 
 Pixslam has inbuilt `min` and `max` functions which take a variable number of arguments. These can be used to implement [morphological image processing](http://www.cs.auckland.ac.nz/courses/compsci773s1c/lectures/ImageProcessing-html/topic4.htm)  operations. Below is code for _erosion_ of an image using a 3x3 neighbourhood. That is: for each pixel we replace it with the minimum value of that pixel and it's 8 neighbours.
 
-```
+``` lisp
 ; erode_3x3.psm
 ; Erode an image with a 3x3 kernel.
 ; That is: each pixel takes the value of the minimum pixel in a 3x3 neighbourhood.
@@ -206,11 +204,11 @@ Pixslam has inbuilt `min` and `max` functions which take a variable number of ar
 ../pixslam erode_3x3.psm ../example_data/lena.png erode_3x3_out.png 
 ```
 
-![Output from erode.psm](raw/master/readme_images/erode_3x3_out.png "Output from erode_3x3.psm.") 
+![Output from erode.psm](readme_images/erode_3x3_out.png "Output from erode_3x3.psm.") 
 
 You can _dilate_ the image by replacing the `min` in the above code with `max`.
 
-![Output from dilate.psm](raw/master/readme_images/dilate_3x3_out.png "Output from dilate_3x3.psm.") 
+![Output from dilate.psm](readme_images/dilate_3x3_out.png "Output from dilate_3x3.psm.") 
 
 ### Interesting Examples ###
 
@@ -218,7 +216,7 @@ You can _dilate_ the image by replacing the `min` in the above code with `max`.
 
 Chaining together results of pixslam programs can yield some nice results. Subtracting a blurred version of an image from the original leaves bland areas close to zero and edge regions positive or negative. So taking the absolute difference of an image with a blurred version of the original gives a simple edge detector!
 
-```
+``` lisp
 ; double_absdiff.psm
 ; Double absolute difference (double because otherwise edges are quite dark.)
 ((A B) (* 2 (max (- A B) (- B A))))
@@ -231,12 +229,12 @@ Now run this on a box blurred Lena and the original image and you get some edges
 ../pixslam --logCommand double_absdiff.psm ../example_data/lena.png box_5x5_out_1.png lena_edge.png
 
 ```
-![Simple edge detection](raw/master/readme_images/lena_edge.png "Simple edge detection")
+![Simple edge detection](readme_images/lena_edge.png "Simple edge detection")
 #### Metaballs #####
 
 [Metaballs](http://en.wikipedia.org/wiki/Metaballs) were pretty cool in the 90s. We can recreate them in Pixslam. An input image is not really needed - we only use a dummy one only to specify the output size. Everything is achieved by using the `i` and `j` variables.
 
-```
+``` lisp
 ; metaballs.psm
 ; Draw some nice metaballs. See: http://en.wikipedia.org/wiki/Metaballs
 ((A) ; input not used, just specifies size
@@ -253,11 +251,11 @@ Now run this on a box blurred Lena and the original image and you get some edges
 ../pixslam metaballs.psm ../example_data/lena.png metaballs_out.png
 ```
 
-![Metaballs example](raw/master/readme_images/metaballs_out.png "Metballs example")
+![Metaballs example](readme_images/metaballs_out.png "Metballs example")
 
 And after some thresholding, and the edge technique described above we end up with this:
 
-![Metaball edges example](raw/master/readme_images/metaball_edges.png "Metaball edges example")
+![Metaball edges example](readme_images/metaball_edges.png "Metaball edges example")
 
 Have a look at the examples directory after bulding to see how that was done. Start by looking at `metaball_edge.png.sh` (or `.bat` if you're on windows).
 
