@@ -11,6 +11,8 @@ Pixslam has three main features.
 
 Right now Pixslam is very much a toy. While more features are planned it is important to note this project was made for my own entertainment rather than to be _useful_.
 
+Some further discussion on the design of Pixslam can be found [here](https://github.com/lukedodd/Pixslam/blob/master/README.md).
+
 Building Pixslam
 ----------------
 
