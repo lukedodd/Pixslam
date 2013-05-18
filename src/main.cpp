@@ -40,6 +40,8 @@ int main (int argc, char *argsRaw[])
         std::cout << "    pixslam mult_by_two.pixslam image.png image_times_two.png\n\n";
         std::cout << "Blend two images together equally and output to blend.png.\n";
         std::cout << "    pixslam ((A B) (* 0.5 (+ A B))) image1.png image2.png blend.png\n\n";
+        std::cout << "Arguments:\n\n";
+        std::cout << "--logAsm     Dumps the generated assembly code to standard output.\n";
         return 1;
     }
 
@@ -108,8 +110,8 @@ int main (int argc, char *argsRaw[])
 
     // Remaining arg, if preset is our output destination.
     std::string outputImagePath = "out.png";
-    if(size_t(argc) >= 3 + cgFunction.getNumArgs())
-        outputImagePath = argv[3 +cgFunction.getNumArgs()-1];
+    if(argv.size() >= 3 + cgFunction.getNumArgs())
+        outputImagePath = argv[3 + cgFunction.getNumArgs() - 1];
 
     // log command line if requested (useful for easy to understand examples directory)
     if(logCommand) logCommandLine(argc, argsRaw, outputImagePath);
