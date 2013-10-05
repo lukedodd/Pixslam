@@ -167,7 +167,7 @@ Combined with multiplication we can use comparison operations zero out parts of 
 
 ``` lisp
 ; threshold.psm
-; Zero out image wherever it is below 0.5
+; Zero out pixels below 0.5, leave the rest untouched.
 ((A)
  (*
     (< A 0.5) ; zero when A < 0.5, one otherwise
