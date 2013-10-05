@@ -255,7 +255,7 @@ Now run this on a box blurred Lena and the original image and you get some edges
 
 ![Metaballs example](readme_images/metaballs_out.png "Metballs example")
 
-And after some thresholding, and the edge technique described above we end up with this:
+After some thresholding, and the edge technique described above we end up with this:
 
 ![Metaball edges example](readme_images/metaball_edges.png "Metaball edges example")
 
